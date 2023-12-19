@@ -1,0 +1,5 @@
+kafka:
+  topic:
+    - ddr_1
+    - ddr_2
+    - ddr_3
