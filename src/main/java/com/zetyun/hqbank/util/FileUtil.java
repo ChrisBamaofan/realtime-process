@@ -1,9 +1,7 @@
 package com.zetyun.hqbank.util;
 
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.util.FileCopyUtils;
-
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
@@ -15,7 +13,7 @@ public class FileUtil {
 
     public static String readFile(String fileName){
         StringBuilder fileContent = new StringBuilder();
-        try (InputStream inputStream = FileUtil.class.getClassLoader().getResourceAsStream("ddl/"+fileName)) {
+        try (InputStream inputStream = FileUtil.class.getClassLoader().getResourceAsStream(fileName)) {
             if (inputStream != null) {
                 // 使用 Scanner 读取文件内容
                 try (Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8.name())) {
@@ -24,7 +22,7 @@ public class FileUtil {
                     }
 
                     // 打印文件内容
-                    System.out.println("File Content:\n" + fileContent.toString());
+//                    System.out.println("File Content:\n" + fileContent.toString());
 
                 }
             } else {
