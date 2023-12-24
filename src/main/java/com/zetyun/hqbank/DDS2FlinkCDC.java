@@ -2,7 +2,7 @@ package com.zetyun.hqbank;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zetyun.hqbank.bean.dds.DDSData;
-import com.zetyun.hqbank.service.oracle.OracleTrigger;
+import com.zetyun.hqbank.service.oracle.OracleService;
 import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
@@ -31,7 +31,7 @@ public class DDS2FlinkCDC {
         List<String> owners = YamlUtil.getListByKey("application.yaml", "table", "owner");
         List<String> topic = new ArrayList<>();
 
-        OracleTrigger oracleTrigger = new OracleTrigger();
+        OracleService oracleTrigger = new OracleService();
         // 改为从数据库 获取 db 或者是 owner
         for (int j = 0; j < owners.size(); j++) {
             String owner = owners.get(j);
@@ -44,11 +44,11 @@ public class DDS2FlinkCDC {
 
         String bootstrap = YamlUtil.getValueByKey("application.yaml", "kafka", "bootstrap");
         for (int i = 0; i < topic.size(); i++) {
-            // orcl-dds-t01
+            // orcl-dds-t01 => DDS_T01
             String sourceTopic = topic.get(i);
             String[] s = sourceTopic.split("-");
 
-            String sinkTopic = s[1].toUpperCase(Locale.ROOT) +"-"+s[2].toUpperCase(Locale.ROOT);
+            String sinkTopic = s[1].toUpperCase(Locale.ROOT) +"_"+s[2].toUpperCase(Locale.ROOT);
             // 设置 Kafka 源相关参数
             Properties sourceProps = new Properties();
             sourceProps.setProperty("bootstrap.servers", bootstrap);

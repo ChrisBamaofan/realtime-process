@@ -1,4 +1,4 @@
-CREATE TABLE if not exists   _db_.kafka_T01 (
+CREATE TABLE if not exists   _db_.KAFKA_DDS_T01 (
     C1 decimal,
     C2 STRING,
     C3 timestamp,

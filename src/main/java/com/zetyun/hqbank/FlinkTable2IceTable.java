@@ -1,5 +1,6 @@
 package com.zetyun.hqbank;
 
+import com.zetyun.hqbank.service.oracle.OracleService;
 import com.zetyun.hqbank.util.FileUtil;
 import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.flink.configuration.Configuration;
@@ -11,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 
 public class FlinkTable2IceTable {
@@ -39,6 +39,13 @@ public class FlinkTable2IceTable {
         StreamTableEnvironment streamTableEnv = StreamTableEnvironment.create(env, settings);
         String catalogName = "iceberg_catalog";
         String databaseName = YamlUtil.getValueByKey("application.yaml", "table", "database");
+        List<String> owners = YamlUtil.getListByKey("application.yaml", "table", "owner");
+
+        OracleService oracleTrigger = new OracleService();
+        for (int j=0;j< owners.size();j++){
+            String owner = owners.get(j);
+            oracleTrigger.generateKafkaSql(catalogName,databaseName,owner);
+        }
 
 
         for (int i = 0; i < topics.size(); i++) {
