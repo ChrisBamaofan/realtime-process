@@ -10,10 +10,13 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
+    private static final HashMap<String,HashMap<String,String>> tableNameMap = new HashMap<>();
 
     public static void main(String[] args) {
 
@@ -30,10 +33,14 @@ public class FlinkTable2IceTable {
         conf.setInteger(RestOptions.PORT, 9999);
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
-        env.enableCheckpointing(3600000L);
+        env.enableCheckpointing(300000L);
 
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().useBlinkPlanner().build();
         StreamTableEnvironment streamTableEnv = StreamTableEnvironment.create(env, settings);
+        String catalogName = "iceberg_catalog";
+        String databaseName = YamlUtil.getValueByKey("application.yaml", "table", "database");
+
+
         for (int i = 0; i < topics.size(); i++) {
             // create flink table with kafka topic
             String tableName = topics.get(i);
@@ -45,7 +52,7 @@ public class FlinkTable2IceTable {
 
             // create hive_catalog
             logger.info("create iceberg_catalog now!");
-            String catalogName = "iceberg_catalog";
+
             String createCatalog = "create catalog " + catalogName + " with (\n" +
                     "   'type'='iceberg',\n" +
                     "   'catalog-type'='hive',\n" +
@@ -60,12 +67,10 @@ public class FlinkTable2IceTable {
             streamTableEnv.executeSql(createCatalog);
 
             // create database
-            String databaseName = YamlUtil.getValueByKey("application.yaml", "table", "database");
             streamTableEnv.executeSql("create database if not exists " + catalogName + "." + databaseName);
             streamTableEnv.executeSql("create database if not exists " + databaseName);
 
             String sinkTable = catalogName + "." + databaseName + ".ice_" + tableName;
-//            String sinkTable = catalogName + "." + databaseName + ".kafka_" + tableName;
             String sourceTable = databaseName + ".kafka_" + tableName;
             streamTableEnv.executeSql("drop table if exists " + sourceTable);
             streamTableEnv.executeSql("drop table if exists " + sinkTable);

@@ -4,6 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * @author zhaohaojie
@@ -23,6 +26,29 @@ public class OracleTrigger {
         // 第二种方式：直接从jdbc数据库连接Connection实例中获取
 //        how2ObtainFieldInfoFromJdbc.method3();
     }
+    // orcl-dds-***
+    public List<String> getTopicNameByDB(String databaseName, String owner){
+        List<String> list = new ArrayList<>();
+        try{
+            String sql = "select * from all_tables where owner = '"+owner+"'";
+            PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
+            ResultSet res  = preparedStatement1.executeQuery();
+            while(res.next()){
+                StringBuilder sb = new StringBuilder();
+                sb.append(databaseName.toLowerCase(Locale.ROOT));
+                sb.append("-");
+                sb.append(res.getString(1).toLowerCase(Locale.ROOT));
+                sb.append("-");
+                sb.append(res.getString(2).toLowerCase(Locale.ROOT));
+                list.add(sb.toString());
+                log.info("owner: " + res.getString(1) + " tableName: " + res.getString(2));
+            }
+        }catch (RuntimeException | SQLException exception){
+            log.error("error occur!",exception);
+        }
+
+        return list;
+    }
 
     private void method1() {
 
@@ -34,6 +60,8 @@ public class OracleTrigger {
                         "owner: " + res.getString(1) + " tableName: " + res.getString(2)
                 );
             }
+            // orcl-dds-t01,T01
+            //
 
             PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.T01 where 1 = 2");
             ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
@@ -102,7 +130,6 @@ public class OracleTrigger {
         }
     }
 
-//    private static final Connection connection = null;
     static {
 
         try{

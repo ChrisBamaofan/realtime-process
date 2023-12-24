@@ -1,11 +1,16 @@
 table:
-  database: db1
+  database:  orcl
+  owner:
+    - DDS
+#    - DBMGR
 
 
 kafka:
   bootstrap: 172.20.3.227:9092
+  # source topic
   topic:
-    - T01
+    - DDS-T01
+  # dds sink topic
   topic2:
     - orcl-dds-t01
     - orcl-dds-t_big
