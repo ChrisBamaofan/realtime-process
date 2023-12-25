@@ -9,7 +9,7 @@ kafka:
   bootstrap: 172.20.3.227:9092
   # source topic
   topic:
-    - DDS-T01
+    - DDS_T01
   # dds sink topic
   topic2:
     - orcl-dds-t01

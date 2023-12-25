@@ -32,7 +32,7 @@ public class DDS2FlinkCDC {
         List<String> topic = new ArrayList<>();
 
         OracleService oracleTrigger = new OracleService();
-        // 改为从数据库 获取 db 或者是 owner
+        // todo 改为从数据库 获取 db 或者是 owner
         for (int j = 0; j < owners.size(); j++) {
             String owner = owners.get(j);
             List<String> topicNameByDB = oracleTrigger.getTopicNameByDB(database, owner);

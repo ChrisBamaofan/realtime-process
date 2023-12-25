@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
@@ -40,20 +41,21 @@ public class FlinkTable2IceTable {
         String catalogName = "iceberg_catalog";
         String databaseName = YamlUtil.getValueByKey("application.yaml", "table", "database");
         List<String> owners = YamlUtil.getListByKey("application.yaml", "table", "owner");
+        String bootstrap = YamlUtil.getValueByKey("application.yaml", "kafka", "bootstrap");
 
+        HashMap<String, HashMap<String, String>> stringHashMapHashMap = null;
         OracleService oracleTrigger = new OracleService();
         for (int j=0;j< owners.size();j++){
             String owner = owners.get(j);
-            oracleTrigger.generateKafkaSql(catalogName,databaseName,owner);
-        }
+            stringHashMapHashMap = oracleTrigger.generateKafkaSql(catalogName, databaseName, owner, bootstrap);
 
+        }
+//        for (Map.Entry entry:stringHashMapHashMap.entrySet()){}
 
         for (int i = 0; i < topics.size(); i++) {
             // create flink table with kafka topic
             String tableName = topics.get(i);
             String sql = FileUtil.readFile("ddl/kafka/" + tableName + ".sql");
-
-            String bootstrap = YamlUtil.getValueByKey("application.yaml", "kafka", "bootstrap");
 
             sql = sql.replace("_TOPIC_", tableName).replace("_BOOTSTRAP_", bootstrap);
 
@@ -77,8 +79,8 @@ public class FlinkTable2IceTable {
             streamTableEnv.executeSql("create database if not exists " + catalogName + "." + databaseName);
             streamTableEnv.executeSql("create database if not exists " + databaseName);
 
-            String sinkTable = catalogName + "." + databaseName + ".ice_" + tableName;
-            String sourceTable = databaseName + ".kafka_" + tableName;
+            String sinkTable = catalogName + "." + databaseName + ".ICE_" + tableName;
+            String sourceTable = databaseName + ".KAFKA_" + tableName;
             streamTableEnv.executeSql("drop table if exists " + sourceTable);
             streamTableEnv.executeSql("drop table if exists " + sinkTable);
 
