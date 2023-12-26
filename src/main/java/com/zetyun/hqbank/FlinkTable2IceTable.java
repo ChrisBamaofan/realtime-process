@@ -7,7 +7,10 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.types.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,18 +30,22 @@ public class FlinkTable2IceTable {
 //        String hadoopConfDir = "/etc/hadoop/conf.cloudera.yarn/";
         String hiveConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-46";
         String hadoopConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-46";
+//        String hiveUri = "thrift://172.20.1.34:9083";
+//        String warehouse = "hdfs://172.20.1.34:8020/user/hive/warehouse/";
+//        String hiveConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-34";
+//        String hadoopConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-34";
         // 读取配置文件
         List<String> topics = YamlUtil.getListByKey("application.yaml", "kafka", "topic");
 
         Configuration conf = new Configuration();
-        conf.setInteger(RestOptions.PORT, 9999);
+        conf.setInteger(RestOptions.PORT, 10001);
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
-        env.enableCheckpointing(300000L);
+        env.enableCheckpointing(10000L);
 
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().useBlinkPlanner().build();
         StreamTableEnvironment streamTableEnv = StreamTableEnvironment.create(env, settings);
-        String catalogName = "iceberg_catalog";
+        String catalogName = "iceberg_catalog_zhj";
         String databaseName = YamlUtil.getValueByKey("application.yaml", "table", "database");
         List<String> owners = YamlUtil.getListByKey("application.yaml", "table", "owner");
         String bootstrap = YamlUtil.getValueByKey("application.yaml", "kafka", "bootstrap");
@@ -81,8 +88,8 @@ public class FlinkTable2IceTable {
 
             String sinkTable = catalogName + "." + databaseName + ".ICE_" + tableName;
             String sourceTable = databaseName + ".KAFKA_" + tableName;
-            streamTableEnv.executeSql("drop table if exists " + sourceTable);
-            streamTableEnv.executeSql("drop table if exists " + sinkTable);
+//            streamTableEnv.executeSql("drop table if exists " + sourceTable);
+//            streamTableEnv.executeSql("drop table if exists " + sinkTable);
 
             // create flink table with kafka topic
             sql = sql.replace("_db_", databaseName);
@@ -100,6 +107,18 @@ public class FlinkTable2IceTable {
             logger.info("insert :{}", insertSql);
             streamTableEnv.executeSql(insertSql);
 
+//            streamTableEnv.executeSql("insert into iceberg_catalog_zhj.orcl.ICE_DDS_T01 values(2,'test','2023-12-26 09:37:00')");
+
         }
+//
+//        Table table = streamTableEnv.sqlQuery("select * from iceberg_catalog_zhj.orcl.ICE_DDS_T01");
+//        streamTableEnv.toAppendStream(table, Row.class).print("iceberg_catalog_zhj.orcl.ICE_DDS_T01 print is:");
+//        try {
+//            env.execute();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+
+
     }
 }

@@ -26,9 +26,10 @@ public class IcebergJavaApiDemo {
 
         String hiveUri = "thrift://172.20.1.34:9083";
         String warehouse = "hdfs://172.20.1.34:8020/user/hive/warehouse/";
-        String hive_conf_dir = "/Users/lifenghua/src/iceberg-demo/config/hive-conf-34";
-        String hadoop_conf_dir = "/Users/lifenghua/src/iceberg-demo/config/hive-conf-34";
-
+//        String hive_conf_dir = "/Users/lifenghua/src/iceberg-demo/config/hive-conf-34";
+//        String hadoop_conf_dir = "/Users/lifenghua/src/iceberg-demo/config/hive-conf-34";
+        String hive_conf_dir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-34";
+        String hadoop_conf_dir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-34";
 
 
         HiveCatalog catalog = new HiveCatalog();
@@ -55,20 +56,20 @@ public class IcebergJavaApiDemo {
 //        //不进行分区
 //        PartitionSpec spec = PartitionSpec.unpartitioned();
 
-        PartitionSpec partitionSpec = PartitionSpec.builderFor(schema).bucket("id", 5, "shared").build();
-        Table table;
+//        PartitionSpec partitionSpec = PartitionSpec.builderFor(schema).bucket("id", 5, "shared").build();
+        Table table = null;
         // 表的属性
         Map<String, String> properties1 = new HashMap<>();
         properties1.put("engine.hive.enabled", "true");
 //
 //        // 数据库名,表名
 //        TableIdentifier name = TableIdentifier.of("lifh2", "test2");
-        TableIdentifier name1 = TableIdentifier.of("default_database", "test_partition_1");
+        TableIdentifier name1 = TableIdentifier.of("orcl", "ICEBERG_DDS_T01");
         if (!catalog.tableExists(name1)) {
-            System.out.println("table not exists");
-            table = catalog.createTable(name1, schema, partitionSpec, properties1);
-            table.replaceSortOrder().asc("id", NullOrder.NULLS_LAST).commit();
-            table.updateProperties().set("write.upsert.enabled", "true").commit();
+//            System.out.println("table not exists");
+//            table = catalog.createTable(name1, schema, partitionSpec, properties1);
+//            table.replaceSortOrder().asc("id", NullOrder.NULLS_LAST).commit();
+//            table.updateProperties().set("write.upsert.enabled", "true").commit();
         } else {
             System.out.println("table exists");
             table = catalog.loadTable(name1);
@@ -83,7 +84,7 @@ public class IcebergJavaApiDemo {
     }
 
     private static void readFromIceberg(Table table) {
-        IcebergGenerics.ScanBuilder scanBuilder = IcebergGenerics.read(table).where(Expressions.equal("id", 1));
+        IcebergGenerics.ScanBuilder scanBuilder = IcebergGenerics.read(table).where(Expressions.equal("C1", 23));
 //        IcebergGenerics.ScanBuilder scanBuilder = IcebergGenerics.read(table);
         CloseableIterable<Record> records = scanBuilder.build();
         long startTime = System.currentTimeMillis();
