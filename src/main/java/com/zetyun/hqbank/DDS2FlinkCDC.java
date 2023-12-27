@@ -22,6 +22,7 @@ import java.util.*;
  */
 public class DDS2FlinkCDC {
     private static final Logger logger = LoggerFactory.getLogger(DDS2FlinkCDC.class);
+    public static final List<String> whiteList = Arrays.asList(new String[]{"orcl-dds-t_zhj2"});
 
     public static void main(String[] args) throws Exception {
         // 设置 Flink 环境
@@ -41,18 +42,21 @@ public class DDS2FlinkCDC {
             }
         }
 
-
         String bootstrap = YamlUtil.getValueByKey("application.yaml", "kafka", "bootstrap");
         for (int i = 0; i < topic.size(); i++) {
             // orcl-dds-t01 => DDS_T01
             String sourceTopic = topic.get(i);
             String[] s = sourceTopic.split("-");
+            if (!whiteList.contains(sourceTopic)) {
+                continue;
+            }
 
-            String sinkTopic = s[1].toUpperCase(Locale.ROOT) +"_"+s[2].toUpperCase(Locale.ROOT);
+            String sinkTopic = s[1].toUpperCase(Locale.ROOT) + "_" + s[2].toUpperCase(Locale.ROOT);
             // 设置 Kafka 源相关参数
             Properties sourceProps = new Properties();
             sourceProps.setProperty("bootstrap.servers", bootstrap);
             sourceProps.setProperty("group.id", "g1");
+            sourceProps.setProperty("scan.startup.mode", "latest-offset");
 
             // 创建 Kafka 源数据流
             DataStream<String> sourceStream = env.addSource(new FlinkKafkaConsumer<>(
@@ -64,11 +68,7 @@ public class DDS2FlinkCDC {
             // 对每条数据进行反序列化和处理，添加字段name
             DataStream<String> processedStream = sourceStream.map(data -> {
                 logger.info("==> get data from kafka [get crud] :{}", data);
-                String processedData = processData(data);
-//                String processedData = "{\"op\":\"u\",\"ts_ms\":1703305991671,\"before\":{\"C1\":23,\"C2\":\"d23\",\"C3\":\"2023-12-12 13:49:23\"},\"after\":{\"C1\":23,\"C2\":\"d24\",\"C3\":\"2023-12-12 13:49:23\"},\"source\":{\"version\":\"1.3.1.Final\",\"connector\":\"oracle\",\"name\":\"oracle-server-1\",\"ts_sec\":0,\"snapshot\":false,\"db\":\"orcl\",\"table\":\"T01\",\"server_id\":0,\"gtid\":null,\"file\":\"changelog.000003\",\"pos\":154,\"row\":2,\"thread\":1,\"query\":\"UPDATE DDS.T01 SET c2 = 'd24' WHERE c1 = 23\"}}";
-//                String processedData = "{\"C1\": 23,\"C2\": \"d23\",\"C3\": \"2023-12-12 13:49:23\"}";
-                // 返回处理后的数据
-                return processedData;
+                return processData(data);
             });
 
 
@@ -85,7 +85,7 @@ public class DDS2FlinkCDC {
             ));
         }
         // 执行程序
-        env.execute("DDS2FLinkCDC!");
+        env.execute("开始同步数据作业A!");
     }
 
 

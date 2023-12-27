@@ -1,5 +1,6 @@
 package com.zetyun.hqbank.service.oracle;
 
+import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,14 +30,15 @@ public class OracleService {
         // 第二种方式：直接从jdbc数据库连接Connection实例中获取
 //        how2ObtainFieldInfoFromJdbc.method3();
     }
+
     // orcl-dds-***  => DDS_T01
-    public List<String> getTopicNameByDB(String databaseName, String owner){
+    public List<String> getTopicNameByDB(String databaseName, String owner) {
         List<String> list = new ArrayList<>();
-        try{
-            String sql = "select * from all_tables where owner = '"+owner+"'";
+        try {
+            String sql = "select * from all_tables where owner = '" + owner + "'";
             PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
-            ResultSet res  = preparedStatement1.executeQuery();
-            while(res.next()){
+            ResultSet res = preparedStatement1.executeQuery();
+            while (res.next()) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(databaseName.toLowerCase(Locale.ROOT));
                 sb.append("-");
@@ -46,22 +48,22 @@ public class OracleService {
                 list.add(sb.toString());
                 log.info("owner: " + res.getString(1) + " tableName: " + res.getString(2));
             }
-        }catch (RuntimeException | SQLException exception){
-            log.error("error occur!",exception);
+        } catch (RuntimeException | SQLException exception) {
+            log.error("error occur!", exception);
         }
 
         return list;
     }
 
     // DDS_T01, <KAFKA_DDS_T01,kafkaSql> <ICE_DDS_T01,iceSQL>
-    public HashMap<String,HashMap<String,String>> generateKafkaSql(String catalogName,String database,String owner,String bootstrap){
+    public HashMap<String, HashMap<String, String>> generateSql(String catalogName, String database, String owner, String bootstrap) {
 
-        HashMap<String,HashMap<String,String>> result = new HashMap<>();
-        try{
-            String sql = "select * from all_tables where owner = '"+owner+"'";
+        HashMap<String, HashMap<String, String>> result = new HashMap<>();
+        try {
+            String sql = "select * from all_tables where owner = '" + owner + "'";
             PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
-            ResultSet res  = preparedStatement1.executeQuery();
-            while(res.next()){
+            ResultSet res = preparedStatement1.executeQuery();
+            while (res.next()) {
                 String tableName = res.getString(2);
 
                 StringBuilder kafkaDDLSql = new StringBuilder();
@@ -73,17 +75,18 @@ public class OracleService {
                 StringBuilder icebergSql = new StringBuilder();
                 icebergSql.append("CREATE TABLE if not exists ");
                 icebergSql.append(catalogName).append(".").append(database)
-                        .append(".ICE_").append(tableName.toUpperCase(Locale.ROOT)).append(" ( ");
+                        .append(".ICE_").append(owner.toUpperCase(Locale.ROOT)).append("_")
+                        .append(tableName.toUpperCase(Locale.ROOT)).append(" ( ");
 
                 // 获取字段
-                String cdcSourceTopic = owner.toUpperCase(Locale.ROOT)+"_"+tableName.toUpperCase(Locale.ROOT);
-                HashMap<String,String> sqlResults = getColumns(database,owner,tableName,kafkaDDLSql,icebergSql,
-                        cdcSourceTopic,bootstrap);
-                result.put(cdcSourceTopic,sqlResults);
+                String cdcSourceTopic = owner.toUpperCase(Locale.ROOT) + "_" + tableName.toUpperCase(Locale.ROOT);
+                HashMap<String, String> sqlResults = getColumns(database, owner, tableName, kafkaDDLSql, icebergSql,
+                        cdcSourceTopic, bootstrap);
+                result.put(cdcSourceTopic, sqlResults);
 
             }
-        }catch (RuntimeException | SQLException runtimeException){
-            log.error("error",runtimeException);
+        } catch (RuntimeException | SQLException runtimeException) {
+            log.error("error", runtimeException);
         }
         return result;
     }
@@ -110,46 +113,46 @@ public class OracleService {
      * @return
      */
     // DDS_T01, <KAFKA_DDS_T01,kafkaSql> <ICE_DDS_T01,iceSQL>
-    public HashMap<String,String> getColumns(String database,String owner,String table,
-                                             StringBuilder kafkaSql,StringBuilder iceSql,
-                                             String topic,String bootstrap){
+    public HashMap<String, String> getColumns(String database, String owner, String table,
+                                              StringBuilder kafkaSql, StringBuilder iceSql,
+                                              String topic, String bootstrap) {
         HashMap<String, String> result = new HashMap<>();
-        try{
-            PreparedStatement preparedStatement = connection.prepareStatement("select * from "+owner+"."+table+" where 1 = 2");
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement("select * from " + owner + "." + table + " where 1 = 2");
             ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
-            String uniqueIdColumnName  = "";
+            String uniqueIdColumnName = "";
             String firstColumnName = "";
 
             for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
 
                 String columnClassName = resultSetMetaData.getColumnClassName(i + 1);
                 String columnName = resultSetMetaData.getColumnName(i + 1);
-                if (StringUtils.isEmpty(firstColumnName)){
+                if (StringUtils.isEmpty(firstColumnName)) {
                     firstColumnName = columnName;
                 }
-                if (columnClassName.contains("java.lang.String")){
-                    if (StringUtils.isEmpty(uniqueIdColumnName)){
+                if (columnClassName.contains("java.lang.String")) {
+                    if (StringUtils.isEmpty(uniqueIdColumnName)) {
                         uniqueIdColumnName = columnName;
                     }
                 }
                 String type = getColumnType(columnClassName);
-                kafkaSql.append(type).append(",");
-                iceSql.append(type).append(",");
+                kafkaSql.append(columnName).append(" ").append(type).append(",");
+                iceSql.append(columnName).append(" ").append(type).append(",");
             }
 
-            if (StringUtils.isEmpty(uniqueIdColumnName)){
+            if (StringUtils.isEmpty(uniqueIdColumnName)) {
                 uniqueIdColumnName = firstColumnName;
             }
             String key = "PRIMARY KEY (`_KEY_`) NOT ENFORCED ) PARTITIONED BY (`_KEY_`) WITH (";
-            key = key.replace("_KEY_",uniqueIdColumnName);
+            key = key.replace("_KEY_", uniqueIdColumnName);
             kafkaSql.append(key);
             iceSql.append(key);
             iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='true')");
-            String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.group.id' = 'g1','scan.startup.mode' = 'earliest-offset','format' = 'debezium-json')";
-            kafkaPrefix = kafkaPrefix.replace("_TOPIC_",topic).replace("_BOOTSTRAP_",bootstrap);
+            String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
+            kafkaPrefix = kafkaPrefix.replace("_TOPIC_", topic).replace("_BOOTSTRAP_", bootstrap);
             kafkaSql.append(kafkaPrefix);
-            result.put("KAFKA_"+topic,kafkaSql.toString());
-            result.put("ICE_"+topic,iceSql.toString());
+            result.put("KAFKA_" + topic, kafkaSql.toString());
+            result.put("ICE_" + topic, iceSql.toString());
 
         } catch (Exception e) {
             log.error("method1 error ", e);
@@ -157,34 +160,34 @@ public class OracleService {
         return result;
     }
 
-    public String getColumnType( String columnClassName){
-        if (columnClassName.contains("java.lang.String")){
+    public String getColumnType(String columnClassName) {
+        if (columnClassName.contains("java.lang.String")) {
             return "String";
         }
-        if (columnClassName.contains("java.math.BigDecimal")){
+        if (columnClassName.contains("java.math.BigDecimal")) {
             return "decimal";
         }
-        if (columnClassName.contains("java.sql.Timestamp")){
+        if (columnClassName.contains("java.sql.Timestamp")) {
             return "timestamp";
         }
-        if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")){
+        if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
             return "timestamp";
         }
-        if (columnClassName.contains("Float")){
+        if (columnClassName.contains("Float")) {
             return "Float";
         }
-        if (columnClassName.contains("Double")){
+        if (columnClassName.contains("Double")) {
             return "Double";
         }
         if (columnClassName.contains("OracleClob")
-                ||columnClassName.contains("OracleBlob")
-                ||columnClassName.contains("OracleNClob")){
+                || columnClassName.contains("OracleBlob")
+                || columnClassName.contains("OracleNClob")) {
             return "String";
         }
-        if (columnClassName.contains("INTERVALYM")||columnClassName.contains("INTERVALDS")){
+        if (columnClassName.contains("INTERVALYM") || columnClassName.contains("INTERVALDS")) {
             return "timestamp";
         }
-        if (columnClassName.contains("[B")){
+        if (columnClassName.contains("[B")) {
             return "RAW";
         }
         // 增加对应的类型
@@ -195,7 +198,7 @@ public class OracleService {
 
     private void method1() {
 
-        try{
+        try {
 //            PreparedStatement preparedStatement1 = connection.prepareStatement("select * from all_tables where owner = 'DBMGR'");
 //            ResultSet res  = preparedStatement1.executeQuery();
 //            while(res.next()){
@@ -206,7 +209,7 @@ public class OracleService {
             // orcl-dds-t01,T01
             //
 
-            PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.T_ZHJ where 1 = 2");
+            PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.T_BIG where 1 = 2");
             ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
 
             for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
@@ -230,23 +233,20 @@ public class OracleService {
 
 
     static {
-
-        try{
-            String jdbcUrl = "jdbc:oracle:thin:@172.20.3.225:1521:orcl";
-            String username = "dbmgr";
-            String password = "oracle";
-
-
+        try {
+            String url = YamlUtil.getValueByKey("application.yaml", "oracle", "url");
+            String username = YamlUtil.getValueByKey("application.yaml", "oracle", "username");
+            String password = YamlUtil.getValueByKey("application.yaml", "oracle", "password");
             Class.forName("oracle.jdbc.driver.OracleDriver");
             // 连接到数据库
-            connection = DriverManager.getConnection(jdbcUrl, username, password);
+            connection = DriverManager.getConnection(url, username, password);
         } catch (Exception e) {
             log.error("autoCodeGeneratorProcess error ", e);
         }
 
     }
 
-    public void getCreateSql(){
+    public void getCreateSql() {
         // JDBC连接信息
         String jdbcUrl = "jdbc:oracle:thin:@172.20.3.225:1521:orcl";
         String username = "dbmgr";

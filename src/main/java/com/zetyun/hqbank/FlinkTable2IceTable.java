@@ -1,26 +1,24 @@
 package com.zetyun.hqbank;
 
 import com.zetyun.hqbank.service.oracle.OracleService;
-import com.zetyun.hqbank.util.FileUtil;
 import com.zetyun.hqbank.util.YamlUtil;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.types.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.zetyun.hqbank.DDS2FlinkCDC.whiteList;
+
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
-    private static final HashMap<String,HashMap<String,String>> tableNameMap = new HashMap<>();
+    private static final HashMap<String, HashMap<String, String>> tableNameMap = new HashMap<>();
+    public static final List<String> whiteList = Arrays.asList(new String[]{"DDS_T_ZHJ2"});
 
     public static void main(String[] args) {
 
@@ -35,71 +33,68 @@ public class FlinkTable2IceTable {
 //        String hiveConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-34";
 //        String hadoopConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-34";
         // 读取配置文件
-        List<String> topics = YamlUtil.getListByKey("application.yaml", "kafka", "topic");
+//        List<String> topics = YamlUtil.getListByKey("application.yaml", "kafka", "topic");
 
-        Configuration conf = new Configuration();
-        conf.setInteger(RestOptions.PORT, 10001);
+//        Configuration conf = new Configuration();
+//        conf.setInteger(RestOptions.PORT, 10000);
 
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
-        env.enableCheckpointing(10000L);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.enableCheckpointing(9000L);
 
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().useBlinkPlanner().build();
         StreamTableEnvironment streamTableEnv = StreamTableEnvironment.create(env, settings);
-        String catalogName = "iceberg_catalog_zhj";
+        String catalogName = "iceberg_catalog";
         String databaseName = YamlUtil.getValueByKey("application.yaml", "table", "database");
         List<String> owners = YamlUtil.getListByKey("application.yaml", "table", "owner");
         String bootstrap = YamlUtil.getValueByKey("application.yaml", "kafka", "bootstrap");
 
-        HashMap<String, HashMap<String, String>> stringHashMapHashMap = null;
+        HashMap<String, HashMap<String, String>> sqlMap = null;
         OracleService oracleTrigger = new OracleService();
-        for (int j=0;j< owners.size();j++){
+        for (int j = 0; j < owners.size(); j++) {
             String owner = owners.get(j);
-            stringHashMapHashMap = oracleTrigger.generateKafkaSql(catalogName, databaseName, owner, bootstrap);
-
+            sqlMap = oracleTrigger.generateSql(catalogName, databaseName, owner, bootstrap);
         }
-//        for (Map.Entry entry:stringHashMapHashMap.entrySet()){}
 
-        for (int i = 0; i < topics.size(); i++) {
-            // create flink table with kafka topic
-            String tableName = topics.get(i);
-            String sql = FileUtil.readFile("ddl/kafka/" + tableName + ".sql");
+        // create hive_catalog
+        logger.info("create iceberg_catalog now!");
 
-            sql = sql.replace("_TOPIC_", tableName).replace("_BOOTSTRAP_", bootstrap);
+        String createCatalog = "create catalog " + catalogName + " with (\n" +
+                "   'type'='iceberg',\n" +
+                "   'catalog-type'='hive',\n" +
+                "   'uri'='" + hiveUri + "',\n" +
+                "   'hive-conf-dir'='" + hiveConfDir + "',\n" +
+                "   'hadoop-conf-dir'='" + hadoopConfDir + "',\n" +
+                "   'client'='1',\n" +
+                "   'property-version'='2',\n" +
+                "   'warehouse'='" + warehouse + "'" +
+                ")\n";
+        logger.info("catalog:{}", createCatalog);
+        streamTableEnv.executeSql(createCatalog);
 
-            // create hive_catalog
-            logger.info("create iceberg_catalog now!");
+        // create database
+        streamTableEnv.executeSql("create database if not exists " + catalogName + "." + databaseName);
+        streamTableEnv.executeSql("create database if not exists " + databaseName);
 
-            String createCatalog = "create catalog " + catalogName + " with (\n" +
-                    "   'type'='iceberg',\n" +
-                    "   'catalog-type'='hive',\n" +
-                    "   'uri'='" + hiveUri + "',\n" +
-                    "   'hive-conf-dir'='" + hiveConfDir + "',\n" +
-                    "   'hadoop-conf-dir'='" + hadoopConfDir + "',\n" +
-                    "   'client'='1',\n" +
-                    "   'property-version'='2',\n" +
-                    "   'warehouse'='" + warehouse + "'" +
-                    ")\n";
-            logger.info("catalog:{}", createCatalog);
-            streamTableEnv.executeSql(createCatalog);
-
-            // create database
-            streamTableEnv.executeSql("create database if not exists " + catalogName + "." + databaseName);
-            streamTableEnv.executeSql("create database if not exists " + databaseName);
-
+        for (Map.Entry entry : sqlMap.entrySet()) {
+            String tableName = (String) entry.getKey();
+            HashMap<String, String> value = (HashMap<String, String>) entry.getValue();
+            String kafkaSql = value.get("KAFKA_" + tableName);
+            String iceSql = value.get("ICE_" + tableName);
+            logger.info("kafkaSql:{},iceSql:{},tableName:{}", kafkaSql, iceSql, tableName);
+            if (!whiteList.contains(tableName)) {// todo delete line
+                continue;
+            }
             String sinkTable = catalogName + "." + databaseName + ".ICE_" + tableName;
             String sourceTable = databaseName + ".KAFKA_" + tableName;
-//            streamTableEnv.executeSql("drop table if exists " + sourceTable);
-//            streamTableEnv.executeSql("drop table if exists " + sinkTable);
+            streamTableEnv.executeSql("drop table if exists " + sourceTable);
+            streamTableEnv.executeSql("drop table if exists " + sinkTable);
 
             // create flink table with kafka topic
-            sql = sql.replace("_db_", databaseName);
-            logger.info("create flink kafka table :{}", sql);
-            streamTableEnv.executeSql(sql);
+            logger.info("create flink table with kafka connector:{}", kafkaSql);
+            streamTableEnv.executeSql(kafkaSql);
 
             // create flink table with iceberg
-            String iceSql = FileUtil.readFile("ddl/iceberg/" + tableName + ".sql");
-            iceSql = iceSql.replace("_CATALOG_", catalogName).replace("_db_", databaseName);
-            logger.info("create flink iceberg table :{}", iceSql);
+            logger.info("create flink table with iceberg connector:{}", iceSql);
             streamTableEnv.executeSql(iceSql);
 
             // create sinkTable
@@ -107,17 +102,7 @@ public class FlinkTable2IceTable {
             logger.info("insert :{}", insertSql);
             streamTableEnv.executeSql(insertSql);
 
-//            streamTableEnv.executeSql("insert into iceberg_catalog_zhj.orcl.ICE_DDS_T01 values(2,'test','2023-12-26 09:37:00')");
-
         }
-//
-//        Table table = streamTableEnv.sqlQuery("select * from iceberg_catalog_zhj.orcl.ICE_DDS_T01");
-//        streamTableEnv.toAppendStream(table, Row.class).print("iceberg_catalog_zhj.orcl.ICE_DDS_T01 print is:");
-//        try {
-//            env.execute();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
 
 
     }

@@ -4,13 +4,10 @@ table:
     - DDS
 #    - DBMGR
 
-
 kafka:
   bootstrap: 172.20.3.227:9092
-  # source topic
-  topic:
-    - DDS_T01
-  # dds sink topic
-  topic2:
-    - orcl-dds-t01
-    - orcl-dds-t_big
+
+oracle:
+  url: jdbc:oracle:thin:@172.20.3.225:1521:orcl
+  username: dbmgr
+  password: oracle
