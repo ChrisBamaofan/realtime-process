@@ -16,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 
+import static com.zetyun.hqbank.service.oracle.OracleService.CONFIG_PATH;
+
 /**
  * @author zhaohaojie
  * @date 2023-12-20 10:32
@@ -28,8 +30,8 @@ public class DDS2FlinkCDC {
         // 设置 Flink 环境
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // 从数据库读取所有的表，并组装为topic信息，供读取使用 todo database是否多个 从mysql读取这些配置
-        String database = YamlUtil.getValueByKey("application.yaml", "table", "database");
-        List<String> owners = YamlUtil.getListByKey("application.yaml", "table", "owner");
+        String database = YamlUtil.getValueByKey(CONFIG_PATH, "table", "database");
+        List<String> owners = YamlUtil.getListByKey(CONFIG_PATH, "table", "owner");
         List<String> topic = new ArrayList<>();
 
         OracleService oracleTrigger = new OracleService();
@@ -42,7 +44,7 @@ public class DDS2FlinkCDC {
             }
         }
 
-        String bootstrap = YamlUtil.getValueByKey("application.yaml", "kafka", "bootstrap");
+        String bootstrap = YamlUtil.getValueByKey(CONFIG_PATH, "kafka", "bootstrap");
         for (int i = 0; i < topic.size(); i++) {
             // orcl-dds-t01 => DDS_T01
             String sourceTopic = topic.get(i);

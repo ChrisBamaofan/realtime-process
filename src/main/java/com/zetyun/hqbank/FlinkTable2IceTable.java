@@ -1,6 +1,7 @@
 package com.zetyun.hqbank;
 
 import com.zetyun.hqbank.service.oracle.OracleService;
+import com.zetyun.hqbank.util.FileUtil;
 import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
@@ -19,22 +20,15 @@ public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
     private static final HashMap<String, HashMap<String, String>> tableNameMap = new HashMap<>();
     public static final List<String> whiteList = Arrays.asList(new String[]{"DDS_T_ZHJ2"});
-
+    public static final String PATH  = "/data/rdx/application.yaml";
     public static void main(String[] args) {
 
-        String hiveUri = "thrift://172.20.29.46:9083";
-        String warehouse = "hdfs://172.20.29.46:8020/user/hive/warehouse/";
-//        String hiveConfDir = "/etc/hive/conf.cloudera.hive/";
-//        String hadoopConfDir = "/etc/hadoop/conf.cloudera.yarn/";
-        String hiveConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-46";
-        String hadoopConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-46";
-//        String hiveUri = "thrift://172.20.1.34:9083";
-//        String warehouse = "hdfs://172.20.1.34:8020/user/hive/warehouse/";
-//        String hiveConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-34";
-//        String hadoopConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-34";
-        // 读取配置文件
-//        List<String> topics = YamlUtil.getListByKey("application.yaml", "kafka", "topic");
+        String hiveUri = YamlUtil.getValueByKey(PATH, "hadoop", "hiveUri");
+        String warehouse = YamlUtil.getValueByKey(PATH, "hadoop", "warehouse");
+        String hiveConfDir = YamlUtil.getValueByKey(PATH, "hadoop", "hiveConfDir");
+        String hadoopConfDir = YamlUtil.getValueByKey(PATH, "hadoop", "hadoopConfDir");
 
+        // 读取配置文件
 //        Configuration conf = new Configuration();
 //        conf.setInteger(RestOptions.PORT, 10000);
 
@@ -44,9 +38,9 @@ public class FlinkTable2IceTable {
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().useBlinkPlanner().build();
         StreamTableEnvironment streamTableEnv = StreamTableEnvironment.create(env, settings);
         String catalogName = "iceberg_catalog";
-        String databaseName = YamlUtil.getValueByKey("application.yaml", "table", "database");
-        List<String> owners = YamlUtil.getListByKey("application.yaml", "table", "owner");
-        String bootstrap = YamlUtil.getValueByKey("application.yaml", "kafka", "bootstrap");
+        String databaseName = YamlUtil.getValueByKey(PATH, "table", "database");
+        List<String> owners = YamlUtil.getListByKey(PATH, "table", "owner");
+        String bootstrap = YamlUtil.getValueByKey(PATH, "kafka", "bootstrap");
 
         HashMap<String, HashMap<String, String>> sqlMap = null;
         OracleService oracleTrigger = new OracleService();
@@ -81,9 +75,9 @@ public class FlinkTable2IceTable {
             String kafkaSql = value.get("KAFKA_" + tableName);
             String iceSql = value.get("ICE_" + tableName);
             logger.info("kafkaSql:{},iceSql:{},tableName:{}", kafkaSql, iceSql, tableName);
-            if (!whiteList.contains(tableName)) {// todo delete line
-                continue;
-            }
+//            if (!whiteList.contains(tableName)) {// todo delete line
+//                continue;
+//            }
             String sinkTable = catalogName + "." + databaseName + ".ICE_" + tableName;
             String sourceTable = databaseName + ".KAFKA_" + tableName;
             streamTableEnv.executeSql("drop table if exists " + sourceTable);

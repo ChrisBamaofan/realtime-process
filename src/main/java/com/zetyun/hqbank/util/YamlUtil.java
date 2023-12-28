@@ -2,6 +2,7 @@ package com.zetyun.hqbank.util;
 
 import org.apache.flink.shaded.jackson2.org.yaml.snakeyaml.Yaml;
 
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.*;
 
@@ -18,7 +19,8 @@ public class YamlUtil {
         InputStream in=null;
         try {
             Yaml yaml = new Yaml();
-            in = YamlUtil.class.getClassLoader().getResourceAsStream(yamlName);
+            in = new FileInputStream(yamlName);
+//            in = YamlUtil.class.getClassLoader().getResourceAsStream(yamlName);
             properties =yaml.loadAs(in,LinkedHashMap.class);
         } catch (Exception e) {
             e.printStackTrace();
