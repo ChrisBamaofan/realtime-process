@@ -20,7 +20,6 @@ public class YamlUtil {
         try {
             Yaml yaml = new Yaml();
             in = new FileInputStream(yamlName);
-//            in = YamlUtil.class.getClassLoader().getResourceAsStream(yamlName);
             properties =yaml.loadAs(in,LinkedHashMap.class);
         } catch (Exception e) {
             e.printStackTrace();
@@ -58,6 +57,16 @@ public class YamlUtil {
         }
         return value;
     }
+    public static Boolean getBooleanValueByKey(String yamlName,String root,String key){
+        getYamlMap(yamlName);
+        Boolean value=null;
+
+            LinkedHashMap<String,String> rootProperty= (LinkedHashMap<String, String>) properties.get(root);
+            value=booleanIter(rootProperty,key);
+
+
+        return value;
+    }
 
     public static List<String> iterList(LinkedHashMap<String,String> rootProperty, String key){
         Iterator it = rootProperty.entrySet().iterator();
@@ -90,5 +99,19 @@ public class YamlUtil {
         }
         return value;
     }
+
+    public static Boolean booleanIter(LinkedHashMap<String,String> rootProperty, String key){
+        Iterator it = rootProperty.entrySet().iterator();
+        Boolean value=null;
+        while(it.hasNext()){
+            Map.Entry entry=(Map.Entry) it.next();
+            if(key.equals(entry.getKey())){
+
+                return (Boolean)entry.getValue();
+            }
+        }
+        return value;
+    }
+
 }
 

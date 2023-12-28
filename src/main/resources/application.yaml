@@ -1,12 +1,30 @@
+#此配置用于读取该库该owner下的所有表，并创建对应的 flink kafka table 和 flink iceberg table
 table:
-  database:  orcl
+  database: orcl
   owner:
     - DDS
 #    - DBMGR
+  whiteListA:
+    - orcl-dds-t_zhj2
+  whiteListB:
+    - DDS_T_ZHJ2
+
+catalog:
+  iceberg: iceberg_catalog
+
+flink:
+  deleteOldTable: false
 
 kafka:
   bootstrap: 172.20.3.227:9092
 
+kerberos:
+  jaasConf: D:\conf\krb\conf2.conf
+  krb5Conf: D:\conf\krb\krb5.conf
+  krb5Keytab: D:\conf\krb\krb5.keytab
+  principal: kafka/host743.zetyun.local@ZETYUN2.LOCAL
+
+#此配置用于读取oracle数据库的元信息
 oracle:
   url: jdbc:oracle:thin:@172.20.3.225:1521:orcl
   username: dbmgr
@@ -18,7 +36,8 @@ hadoop:
   hiveConfDir: /etc/hive/conf.cloudera.hive/
   hadoopConfDir: /etc/hadoop/conf.cloudera.yarn/
 
-#
+
+
 #  //        String hiveUri = "thrift://172.20.29.46:9083";
 #  //        String warehouse = "hdfs://172.20.29.46:8020/user/hive/warehouse/";
 #  //        String hiveConfDir = "/etc/hive/conf.cloudera.hive/";

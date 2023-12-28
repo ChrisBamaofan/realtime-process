@@ -19,7 +19,7 @@ import static com.zetyun.hqbank.FlinkTable2IceTable.PATH;
  * @date 2023-12-22 14:30
  */
 public class OracleService {
-    public static final String CONFIG_PATH = "/data/rdx/application.yaml";
+    public static final String CONFIG_PATH = "D:/conf/application.yaml";
     private static Connection connection;
     private static final Logger log = LoggerFactory.getLogger(OracleService.class);
 
@@ -151,7 +151,7 @@ public class OracleService {
             kafkaSql.append(key);
             iceSql.append(key);
             iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='true')");
-            String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
+            String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.sasl.kerberos.service.name' = 'kafka','properties.sasl.mechanism' = 'GSSAPI','properties.security.protocol' = 'SASL_PLAINTEXT','properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
             kafkaPrefix = kafkaPrefix.replace("_TOPIC_", topic).replace("_BOOTSTRAP_", bootstrap);
             kafkaSql.append(kafkaPrefix);
             result.put("KAFKA_" + topic, kafkaSql.toString());
