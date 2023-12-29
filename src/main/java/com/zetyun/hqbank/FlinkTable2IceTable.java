@@ -1,5 +1,6 @@
 package com.zetyun.hqbank;
 
+import com.sun.security.auth.module.Krb5LoginModule;
 import com.zetyun.hqbank.service.oracle.OracleService;
 import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.commons.collections.CollectionUtils;
@@ -16,7 +17,7 @@ import java.util.*;
 
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
-    public static final String PATH = "D:/conf/application.yaml";
+    public static final String PATH = "D:/conf/windows/application.yaml";
 
     public static void main(String[] args) {
         // kerberos 认证配置
@@ -39,6 +40,22 @@ public class FlinkTable2IceTable {
         List<String> whiteList = YamlUtil.getListByKey(PATH, "table", "whiteListB");
         String catalogName = YamlUtil.getValueByKey(PATH, "catalog", "iceberg");
         Boolean deleteOldFlinkTable = YamlUtil.getBooleanValueByKey(PATH, "flink", "deleteOldTable");
+
+
+        logger.info("jaasConf:{}",jaasConf);
+        logger.info("krb5Conf:{}",krb5Conf);
+        logger.info("krb5Keytab:{}",krb5Keytab);
+        logger.info("principal:{}",principal);
+        logger.info("bootstrap:{}",bootstrap);
+        logger.info("hiveUri:{}",hiveUri);
+        logger.info("warehouse:{}",warehouse);
+        logger.info("hiveConfDir:{}",hiveConfDir);
+        logger.info("hadoopConfDir:{}",hadoopConfDir);
+        logger.info("databaseName:{}",databaseName);
+        logger.info("catalogName:{}",catalogName);
+        logger.info("deleteOldFlinkTable:{}",deleteOldFlinkTable);
+        logger.info("owners:{}",owners);
+        logger.info("whiteList:{}",whiteList);
 
 //        Configuration conf = new Configuration();
 //        conf.setInteger(RestOptions.PORT, 10000);

@@ -19,7 +19,9 @@ import static com.zetyun.hqbank.FlinkTable2IceTable.PATH;
  * @date 2023-12-22 14:30
  */
 public class OracleService {
-    public static final String CONFIG_PATH = "D:/conf/application.yaml";
+    //D:/conf/application.yaml
+//    public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
+    public static final String CONFIG_PATH = "D:/conf/windows/application.yaml";
     private static Connection connection;
     private static final Logger log = LoggerFactory.getLogger(OracleService.class);
 
@@ -95,18 +97,6 @@ public class OracleService {
     }
 
     /**
-     * VARCHAR2(n)	STRING
-     * CHAR(n)	STRING
-     * NUMBER(p, s)	DECIMAL(p, s)
-     * DATE	TIMESTAMP
-     * TIMESTAMP	TIMESTAMP
-     * CLOB	STRING
-     * BLOB	BYTES
-     * BINARY_FLOAT	FLOAT
-     * BINARY_DOUBLE	DOUBLE
-     * RAW(n)	BYTES
-     * INTERVAL YEAR TO MONTH	INTERVAL_YEAR_MONTH
-     * INTERVAL DAY TO SECOND	INTERVAL_DAY_TIME
      *
      * @param database
      * @param owner

@@ -244,19 +244,26 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-kafka_2.11</artifactId>
+      <version>1.13.6</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>kafka-clients</artifactId>
+          <groupId>org.apache.kafka</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>1.18.20</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.flink</groupId>
-      <artifactId>flink-connector-base</artifactId>
-      <version>1.13.6</version>
-      <scope>provided</scope>
-    </dependency>
   </dependencies>
   <properties>
+    <flink.version>1.13.6</flink.version>
     <rt.version>3.2.0-SNAPSHOT</rt.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>8</maven.compiler.source>

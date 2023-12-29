@@ -41,6 +41,15 @@ public class DDS2FlinkCDC {
         // 白名单配置
         List<String> whiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "whiteListA");
 
+        logger.info("jaasConf:{}",jaasConf);
+        logger.info("krb5Conf:{}",krb5Conf);
+        logger.info("krb5Keytab:{}",krb5Keytab);
+        logger.info("principal:{}",principal);
+        logger.info("bootstrap:{}",bootstrap);
+        logger.info("database:{}",database);
+        logger.info("owners:{}",owners);
+        logger.info("whiteList:{}",whiteList);
+
         // flink 指定 jaas 必须此配置 用于认证
         System.setProperty("java.security.auth.login.config", jaasConf);
 
@@ -82,6 +91,12 @@ public class DDS2FlinkCDC {
             sourceProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sourceProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sourceProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
+//            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
+//                    "    useKeyTab=true\n" +
+//                    "    storeKey=true\n" +
+//                    "    serviceName=kafka\n" +
+//                    "    keyTab=\"D:/conf/krb2/kafka.keytab\"\n" +
+//                    "    principal=\"kafka/host743.zetyun.local@ZETYUN2.LOCAL\";");
 
             // 创建 Kafka 源数据流
             DataStream<String> sourceStream = env.addSource(new FlinkKafkaConsumer<>(
@@ -100,14 +115,18 @@ public class DDS2FlinkCDC {
             // 设置 Kafka 宿相关参数
             Properties sinkProps = new Properties();
             sinkProps.setProperty("bootstrap.servers", bootstrap);
-            sinkProps.setProperty(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrap);
             sinkProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sinkProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sinkProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
+//            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
+//                    "    useKeyTab=true\n" +
+//                    "    storeKey=true\n" +
+//                    "    serviceName=kafka\n" +
+//                    "    keyTab=\"D:/conf/krb2/kafka.keytab\"\n" +
+//                    "    principal=\"kafka/host743.zetyun.local@ZETYUN2.LOCAL\";");
 
             logger.info("从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
             // 创建 Kafka 宿数据流
-//            processedStream.print();
             processedStream.addSink(new FlinkKafkaProducer<>(
                     sinkTopic,
                     new SimpleStringSchema(),
