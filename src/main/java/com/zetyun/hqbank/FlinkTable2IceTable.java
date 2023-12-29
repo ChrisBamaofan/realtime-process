@@ -1,10 +1,8 @@
 package com.zetyun.hqbank;
 
-import com.sun.security.auth.module.Krb5LoginModule;
 import com.zetyun.hqbank.service.oracle.OracleService;
 import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
@@ -17,7 +15,8 @@ import java.util.*;
 
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
-    public static final String PATH = "D:/conf/windows/application.yaml";
+//    public static final String PATH = "D:/conf/windows/application.yaml";
+    public static final String PATH = "/opt/flink-on-yarn/conf/application.yaml";
 
     public static void main(String[] args) {
         // kerberos 认证配置

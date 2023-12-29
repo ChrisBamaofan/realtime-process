@@ -5,23 +5,21 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
-import static com.zetyun.hqbank.FlinkTable2IceTable.PATH;
 
 /**
  * @author zhaohaojie
  * @date 2023-12-22 14:30
  */
 public class OracleService {
-    //D:/conf/application.yaml
-//    public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
-    public static final String CONFIG_PATH = "D:/conf/windows/application.yaml";
+
+//    public static final String CONFIG_PATH = "D:/conf/application.yaml";
+    public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
     private static Connection connection;
     private static final Logger log = LoggerFactory.getLogger(OracleService.class);
 
