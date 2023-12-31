@@ -24,36 +24,6 @@
             <version>1.7.28</version>
         </dependency>
         <dependency>
-            <groupId>com.zetyun.rt</groupId>
-            <artifactId>rt_sdk</artifactId>
-            <version>${rt.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.zetyun.rt</groupId>
-            <artifactId>rt_meta_processor</artifactId>
-            <version>${rt.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.zetyun.rt</groupId>
-            <artifactId>rt_models</artifactId>
-            <version>${rt.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.zetyun.rt</groupId>
-            <artifactId>rt_common</artifactId>
-            <version>${rt.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.zetyun.rt</groupId>
-            <artifactId>rt_streaming_api</artifactId>
-            <version>${rt.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-table-api-java-bridge_2.11</artifactId>
             <version>${flink.version}</version>
@@ -102,12 +72,13 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-json</artifactId>
             <version>${flink.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
-<!--            <scope>provided</scope>-->
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
