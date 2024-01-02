@@ -22,6 +22,8 @@ import java.util.*;
 import static com.zetyun.hqbank.service.oracle.OracleService.CONFIG_PATH;
 
 /**
+ * flink datastream 将数据从 topic1 发送到 topic2,中间将数据清洗
+ *
  * @author zhaohaojie
  * @date 2023-12-20 10:32
  */
@@ -52,17 +54,21 @@ public class DDS2FlinkCDC {
 
         // flink 指定 jaas 必须此配置 用于认证
         System.setProperty("java.security.auth.login.config", jaasConf);
+        System.setProperty("java.security.krb5.conf", krb5Conf);
 
         Properties flinkProps = new Properties();
         flinkProps.setProperty("security.kerberos.krb5-conf.path", krb5Conf);
         flinkProps.setProperty("security.kerberos.login.keytab", krb5Keytab);
         flinkProps.setProperty("security.kerberos.login.principal", principal);
         flinkProps.setProperty("security.kerberos.login.contexts", "Client,KafkaClient");
+        flinkProps.setProperty("security.kerberos.login.use-ticket-cache","false");
+
         flinkProps.setProperty("state.backend", "hashmap");
 
         Configuration flinkConfig = new Configuration();
         flinkConfig.addAllToProperties(flinkProps);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(flinkConfig);
+
 
         List<String> topic = new ArrayList<>();
         OracleService oracleTrigger = new OracleService();
@@ -74,6 +80,8 @@ public class DDS2FlinkCDC {
             }
         }
 
+//        String sinkTopic="orcl-dds-t_zhj2";
+//        String sourceTopic="DDS_T_ZHJ2";
         for (String sourceTopic : topic) {
             String[] s = sourceTopic.split("-");
             if (CollectionUtils.isNotEmpty(whiteList)) {
@@ -94,9 +102,10 @@ public class DDS2FlinkCDC {
 //            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
 //                    "    useKeyTab=true\n" +
 //                    "    storeKey=true\n" +
+//                    "    debug=true\n" +
 //                    "    serviceName=kafka\n" +
-//                    "    keyTab=\"D:/conf/krb2/kafka.keytab\"\n" +
-//                    "    principal=\"kafka/host743.zetyun.local@ZETYUN2.LOCAL\";");
+//                    "    keyTab=\""+krb5Keytab+"\"\n" +
+//                    "    principal=\""+principal+"\";");
 
             // 创建 Kafka 源数据流
             DataStream<String> sourceStream = env.addSource(new FlinkKafkaConsumer<>(
@@ -121,11 +130,13 @@ public class DDS2FlinkCDC {
 //            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
 //                    "    useKeyTab=true\n" +
 //                    "    storeKey=true\n" +
+//                    "    debug=true\n" +
 //                    "    serviceName=kafka\n" +
-//                    "    keyTab=\"D:/conf/krb2/kafka.keytab\"\n" +
-//                    "    principal=\"kafka/host743.zetyun.local@ZETYUN2.LOCAL\";");
+//                    "    keyTab=\""+krb5Keytab+"\"\n" +
+//                    "    principal=\""+principal+"\";");
 
-            logger.info("从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
+
+        logger.info("从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
             // 创建 Kafka 宿数据流
             processedStream.addSink(new FlinkKafkaProducer<>(
                     sinkTopic,

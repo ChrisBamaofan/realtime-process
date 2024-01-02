@@ -18,7 +18,7 @@ import java.util.Locale;
  */
 public class OracleService {
 
-//    public static final String CONFIG_PATH = "D:/conf/application.yaml";
+//    public static final String CONFIG_PATH = "D:/conf/windows/application.yaml";
     public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
     private static Connection connection;
     private static final Logger log = LoggerFactory.getLogger(OracleService.class);
@@ -138,7 +138,7 @@ public class OracleService {
             key = key.replace("_KEY_", uniqueIdColumnName);
             kafkaSql.append(key);
             iceSql.append(key);
-            iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='true')");
+            iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop')");
             String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.sasl.kerberos.service.name' = 'kafka','properties.sasl.mechanism' = 'GSSAPI','properties.security.protocol' = 'SASL_PLAINTEXT','properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
             kafkaPrefix = kafkaPrefix.replace("_TOPIC_", topic).replace("_BOOTSTRAP_", bootstrap);
             kafkaSql.append(kafkaPrefix);

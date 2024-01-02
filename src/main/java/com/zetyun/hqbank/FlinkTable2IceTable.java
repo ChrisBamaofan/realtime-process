@@ -12,33 +12,33 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+import static com.zetyun.hqbank.service.oracle.OracleService.CONFIG_PATH;
+
 
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
-//    public static final String PATH = "D:/conf/windows/application.yaml";
-    public static final String PATH = "/opt/flink-on-yarn/conf/application.yaml";
 
     public static void main(String[] args) {
         // kerberos 认证配置
-        String jaasConf = YamlUtil.getValueByKey(PATH, "kerberos", "jaasConf");
-        String krb5Conf = YamlUtil.getValueByKey(PATH, "kerberos", "krb5Conf");
-        String krb5Keytab = YamlUtil.getValueByKey(PATH, "kerberos", "krb5Keytab");
-        String principal = YamlUtil.getValueByKey(PATH, "kerberos", "principal");
+        String jaasConf = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "jaasConf");
+        String krb5Conf = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "krb5Conf");
+        String krb5Keytab = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "krb5Keytab");
+        String principal = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "principal");
 
         // catalog 配置信息
-        String hiveUri = YamlUtil.getValueByKey(PATH, "hadoop", "hiveUri");
-        String warehouse = YamlUtil.getValueByKey(PATH, "hadoop", "warehouse");
-        String hiveConfDir = YamlUtil.getValueByKey(PATH, "hadoop", "hiveConfDir");
-        String hadoopConfDir = YamlUtil.getValueByKey(PATH, "hadoop", "hadoopConfDir");
+        String hiveUri = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "hiveUri");
+        String warehouse = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "warehouse");
+        String hiveConfDir = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "hiveConfDir");
+        String hadoopConfDir = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "hadoopConfDir");
         // 读取建表语句
-        String databaseName = YamlUtil.getValueByKey(PATH, "table", "database");
-        List<String> owners = YamlUtil.getListByKey(PATH, "table", "owner");
+        String databaseName = YamlUtil.getValueByKey(CONFIG_PATH, "table", "database");
+        List<String> owners = YamlUtil.getListByKey(CONFIG_PATH, "table", "owner");
         // kafka 配置
-        String bootstrap = YamlUtil.getValueByKey(PATH, "kafka", "bootstrap");
+        String bootstrap = YamlUtil.getValueByKey(CONFIG_PATH, "kafka", "bootstrap");
         // 白名单，如果不为空，则建立所有表的流
-        List<String> whiteList = YamlUtil.getListByKey(PATH, "table", "whiteListB");
-        String catalogName = YamlUtil.getValueByKey(PATH, "catalog", "iceberg");
-        Boolean deleteOldFlinkTable = YamlUtil.getBooleanValueByKey(PATH, "flink", "deleteOldTable");
+        List<String> whiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "whiteListB");
+        String catalogName = YamlUtil.getValueByKey(CONFIG_PATH, "catalog", "iceberg");
+        Boolean deleteOldFlinkTable = YamlUtil.getBooleanValueByKey(CONFIG_PATH, "flink", "deleteOldTable");
 
 
         logger.info("jaasConf:{}",jaasConf);

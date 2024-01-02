@@ -22,6 +22,37 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
             <version>1.7.28</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.zetyun.rt</groupId>
+            <artifactId>rt_sdk</artifactId>
+            <version>${rt.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.zetyun.rt</groupId>
+            <artifactId>rt_meta_processor</artifactId>
+            <version>${rt.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.zetyun.rt</groupId>
+            <artifactId>rt_models</artifactId>
+            <version>${rt.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.zetyun.rt</groupId>
+            <artifactId>rt_common</artifactId>
+            <version>${rt.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.zetyun.rt</groupId>
+            <artifactId>rt_streaming_api</artifactId>
+            <version>${rt.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
@@ -72,36 +103,36 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-json</artifactId>
             <version>${flink.version}</version>
-            <scope>provided</scope>
+<!--            <scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
-            <scope>provided</scope>
+<!--            <scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>3.0.0</version>
         </dependency>
-        <!-- jar包 发布报错 缺失-->
-        <!--        <dependency>-->
-        <!--            <groupId>org.apache.hadoop</groupId>-->
-        <!--            <artifactId>hadoop-common</artifactId>-->
-        <!--            <version>3.0.0</version>-->
-        <!--        </dependency>-->
     </dependencies>
 
     <build>
         <resources>
-            <resource>
-                <directory>lib</directory>
-                <targetPath>BOOT-INF/lib/</targetPath>
-                <includes>
-                    <include>flink-sql-connector-hive-2.1.1-cdh6.3.2_2.11-1.13.6.jar</include>
-                </includes>
-            </resource>
+<!--            <resource>-->
+<!--                <directory>lib</directory>-->
+<!--                <targetPath>BOOT-INF/lib/</targetPath>-->
+<!--                <includes>-->
+<!--                    <include>flink-sql-connector-hive-2.1.1-cdh6.3.2_2.11-1.13.6.jar</include>-->
+<!--                </includes>-->
+<!--            </resource>-->
+<!--            <resource>-->
+<!--                <directory>src/main/resources</directory>-->
+<!--                <excludes>-->
+<!--                    <exclude>log4j.properties</exclude>-->
+<!--                </excludes>-->
+<!--            </resource>-->
         </resources>
         <plugins>
             <plugin>
@@ -147,6 +178,18 @@
                                     <exclude>ch.qos.logback</exclude>
                                 </excludes>
                             </artifactSet>
+                            <filters>
+                                <filter>
+                                    <!-- Do not copy the signatures in the META-INF folder.
+                                    Otherwise, this might cause SecurityExceptions when using the JAR. -->
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>
