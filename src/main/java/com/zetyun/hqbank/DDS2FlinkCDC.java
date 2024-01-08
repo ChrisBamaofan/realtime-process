@@ -99,13 +99,13 @@ public class DDS2FlinkCDC {
             sourceProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sourceProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sourceProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-//            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
-//                    "    useKeyTab=true\n" +
-//                    "    storeKey=true\n" +
-//                    "    debug=true\n" +
-//                    "    serviceName=kafka\n" +
-//                    "    keyTab=\""+krb5Keytab+"\"\n" +
-//                    "    principal=\""+principal+"\";");
+            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
+                    "    useKeyTab=true\n" +
+                    "    storeKey=true\n" +
+                    "    debug=true\n" +
+                    "    serviceName=kafka\n" +
+                    "    keyTab=\""+krb5Keytab+"\"\n" +
+                    "    principal=\""+principal+"\";");
 
             // 创建 Kafka 源数据流
             DataStream<String> sourceStream = env.addSource(new FlinkKafkaConsumer<>(
@@ -127,13 +127,13 @@ public class DDS2FlinkCDC {
             sinkProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sinkProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sinkProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-//            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
-//                    "    useKeyTab=true\n" +
-//                    "    storeKey=true\n" +
-//                    "    debug=true\n" +
-//                    "    serviceName=kafka\n" +
-//                    "    keyTab=\""+krb5Keytab+"\"\n" +
-//                    "    principal=\""+principal+"\";");
+            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
+                    "    useKeyTab=true\n" +
+                    "    storeKey=true\n" +
+                    "    debug=true\n" +
+                    "    serviceName=kafka\n" +
+                    "    keyTab=\""+krb5Keytab+"\"\n" +
+                    "    principal=\""+principal+"\";");
 
 
         logger.info("从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
