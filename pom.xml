@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <rt.version>3.2.0-SNAPSHOT</rt.version>
         <lombok.version>1.18.20</lombok.version>
-        <flink.version>1.13.6</flink.version>
+        <flink.version>1.15.1</flink.version>
     </properties>
 
     <dependencies>
@@ -100,21 +100,6 @@
     </dependencies>
 
     <build>
-        <resources>
-<!--            <resource>-->
-<!--                <directory>lib</directory>-->
-<!--                <targetPath>BOOT-INF/lib/</targetPath>-->
-<!--                <includes>-->
-<!--                    <include>flink-sql-connector-hive-2.1.1-cdh6.3.2_2.11-1.13.6.jar</include>-->
-<!--                </includes>-->
-<!--            </resource>-->
-<!--            <resource>-->
-<!--                <directory>src/main/resources</directory>-->
-<!--                <excludes>-->
-<!--                    <exclude>log4j.properties</exclude>-->
-<!--                </excludes>-->
-<!--            </resource>-->
-        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -159,18 +144,18 @@
                                     <exclude>ch.qos.logback</exclude>
                                 </excludes>
                             </artifactSet>
-                            <!--<filters>-->
-                            <!--    <filter>-->
-                                    <!-- Do not copy the signatures in the META-INF folder.
-                            <!--        Otherwise, this might cause SecurityExceptions when using the JAR. -->-->
-                            <!--        <artifact>*:*</artifact>-->
-                            <!--        <excludes>-->
-                            <!--            <exclude>META-INF/*.SF</exclude>-->
-                            <!--            <exclude>META-INF/*.DSA</exclude>-->
-                            <!--            <exclude>META-INF/*.RSA</exclude>-->
-                            <!--        </excludes>-->
-                            <!--    </filter>-->
-                            <!--</filters>-->
+<!--                            <filters>-->
+<!--                                <filter>-->
+<!--                                    &lt;!&ndash; Do not copy the signatures in the META-INF folder.-->
+<!--                                    Otherwise, this might cause SecurityExceptions when using the JAR. &ndash;&gt;-->
+<!--                                    <artifact>*:*</artifact>-->
+<!--                                    <excludes>-->
+<!--                                        <exclude>META-INF/*.SF</exclude>-->
+<!--                                        <exclude>META-INF/*.DSA</exclude>-->
+<!--                                        <exclude>META-INF/*.RSA</exclude>-->
+<!--                                    </excludes>-->
+<!--                                </filter>-->
+<!--                            </filters>-->
                         </configuration>
                     </execution>
                 </executions>
