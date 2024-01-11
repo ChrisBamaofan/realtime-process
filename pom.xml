@@ -109,10 +109,7 @@
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
-                    <!--                    <compilerArguments>-->
-                    <!--                        &lt;!&ndash; 打包本地jar包 &ndash;&gt;-->
-                    <!--                        <extdirs>${project.basedir}/lib</extdirs>-->
-                    <!--                    </compilerArguments>-->
+
                 </configuration>
                 <executions>
                     <execution>
@@ -144,18 +141,6 @@
                                     <exclude>ch.qos.logback</exclude>
                                 </excludes>
                             </artifactSet>
-<!--                            <filters>-->
-<!--                                <filter>-->
-<!--                                    &lt;!&ndash; Do not copy the signatures in the META-INF folder.-->
-<!--                                    Otherwise, this might cause SecurityExceptions when using the JAR. &ndash;&gt;-->
-<!--                                    <artifact>*:*</artifact>-->
-<!--                                    <excludes>-->
-<!--                                        <exclude>META-INF/*.SF</exclude>-->
-<!--                                        <exclude>META-INF/*.DSA</exclude>-->
-<!--                                        <exclude>META-INF/*.RSA</exclude>-->
-<!--                                    </excludes>-->
-<!--                                </filter>-->
-<!--                            </filters>-->
                         </configuration>
                     </execution>
                 </executions>
