@@ -1,13 +1,23 @@
 package com.zetyun.hqbank;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zetyun.hqbank.bean.dds.DDSData;
+import com.zetyun.hqbank.bean.dds.DDSPayload;
 import com.zetyun.hqbank.service.oracle.OracleService;
 import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.connector.base.DeliveryGuarantee;
+import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
+import org.apache.flink.connector.kafka.sink.KafkaSink;
+import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
@@ -43,14 +53,14 @@ public class DDS2FlinkCDC {
         // 白名单配置
         List<String> whiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "whiteListA");
 
-        logger.info("jaasConf:{}",jaasConf);
-        logger.info("krb5Conf:{}",krb5Conf);
-        logger.info("krb5Keytab:{}",krb5Keytab);
-        logger.info("principal:{}",principal);
-        logger.info("bootstrap:{}",bootstrap);
-        logger.info("database:{}",database);
-        logger.info("owners:{}",owners);
-        logger.info("whiteList:{}",whiteList);
+        logger.info("jaasConf:{}", jaasConf);
+        logger.info("krb5Conf:{}", krb5Conf);
+        logger.info("krb5Keytab:{}", krb5Keytab);
+        logger.info("principal:{}", principal);
+        logger.info("bootstrap:{}", bootstrap);
+        logger.info("database:{}", database);
+        logger.info("owners:{}", owners);
+        logger.info("whiteList:{}", whiteList);
 
         // flink 指定 jaas 必须此配置 用于认证
         System.setProperty("java.security.auth.login.config", jaasConf);
@@ -61,8 +71,7 @@ public class DDS2FlinkCDC {
         flinkProps.setProperty("security.kerberos.login.keytab", krb5Keytab);
         flinkProps.setProperty("security.kerberos.login.principal", principal);
         flinkProps.setProperty("security.kerberos.login.contexts", "Client,KafkaClient");
-        flinkProps.setProperty("security.kerberos.login.use-ticket-cache","false");
-
+        flinkProps.setProperty("security.kerberos.login.use-ticket-cache", "false");
         flinkProps.setProperty("state.backend", "hashmap");
 
         Configuration flinkConfig = new Configuration();
@@ -99,20 +108,26 @@ public class DDS2FlinkCDC {
             sourceProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sourceProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sourceProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
-                    "    useKeyTab=true\n" +
-                    "    storeKey=true\n" +
-                    "    debug=true\n" +
-                    "    serviceName=kafka\n" +
-                    "    keyTab=\""+krb5Keytab+"\"\n" +
-                    "    principal=\""+principal+"\";");
+//            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
+//                    "    useKeyTab=true\n" +
+//                    "    storeKey=true\n" +
+//                    "    debug=true\n" +
+//                    "    serviceName=kafka\n" +
+//                    "    keyTab=\"" + krb5Keytab + "\"\n" +
+//                    "    principal=\"" + principal + "\";");
 
             // 创建 Kafka 源数据流
-            DataStream<String> sourceStream = env.addSource(new FlinkKafkaConsumer<>(
-                    sourceTopic,
-                    new SimpleStringSchema(),
-                    sourceProps
-            ));
+            KafkaSource<String> source = KafkaSource.<String>builder()
+                    .setBootstrapServers(bootstrap)
+                    .setTopics(sourceTopic)
+                    .setGroupId("g1")
+                    .setStartingOffsets(OffsetsInitializer.latest())
+                    .setValueOnlyDeserializer(new SimpleStringSchema())
+                    .setProperties(sourceProps)
+                    .build();
+
+            DataStreamSource<String> sourceStream =
+                    env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source" + sourceTopic);
 
             // 对每条数据进行反序列化和处理
             DataStream<String> processedStream = sourceStream.map(data -> {
@@ -123,42 +138,60 @@ public class DDS2FlinkCDC {
 
             // 设置 Kafka 宿相关参数
             Properties sinkProps = new Properties();
-            sinkProps.setProperty("bootstrap.servers", bootstrap);
             sinkProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sinkProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sinkProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG,"com.sun.security.auth.module.Krb5LoginModule required\n" +
-                    "    useKeyTab=true\n" +
-                    "    storeKey=true\n" +
-                    "    debug=true\n" +
-                    "    serviceName=kafka\n" +
-                    "    keyTab=\""+krb5Keytab+"\"\n" +
-                    "    principal=\""+principal+"\";");
+//            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
+//                    "    useKeyTab=true\n" +
+//                    "    storeKey=true\n" +
+//                    "    debug=true\n" +
+//                    "    serviceName=kafka\n" +
+//                    "    keyTab=\"" + krb5Keytab + "\"\n" +
+//                    "    principal=\"" + principal + "\";");
 
 
-        logger.info("从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
+            logger.info("从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
             // 创建 Kafka 宿数据流
-            processedStream.addSink(new FlinkKafkaProducer<>(
-                    sinkTopic,
-                    new SimpleStringSchema(),
-                    sinkProps
-            ));
+            KafkaSink<String> sink = KafkaSink.<String>builder()
+                    .setBootstrapServers(bootstrap)
+                    .setRecordSerializer(KafkaRecordSerializationSchema.builder()
+                            .setTopic(sinkTopic)
+                            .setValueSerializationSchema(new SimpleStringSchema())
+                            .build()
+                    )
+                    .setDeliverGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                    .setKafkaProducerConfig(sinkProps)
+                    .build();
+            processedStream.sinkTo(sink);
         }
         // 执行程序
         env.execute("开始同步数据作业A!");
-    }
 
+    }
 
     private static String processData(String input) {
         ObjectMapper om = new ObjectMapper();
+        if (StringUtils.isEmpty(input)) {
+            DDSPayload p = new DDSPayload();
+            try {
+                return om.writeValueAsString(p);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
         try {
             DDSData ddsData = om.readValue(input, DDSData.class);
             return om.writeValueAsString(ddsData.getPayload());
         } catch (IOException e) {
             logger.error("[processData] 异常情况！", e);
         }
-        return "";
+        DDSPayload p = new DDSPayload();
+        try {
+            return om.writeValueAsString(p);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
-
 }
-

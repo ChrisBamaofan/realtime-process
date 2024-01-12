@@ -30,6 +30,8 @@ public class FlinkTable2IceTable {
         String warehouse = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "warehouse");
         String hiveConfDir = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "hiveConfDir");
         String hadoopConfDir = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "hadoopConfDir");
+        String hadoopUserName = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "loginUserName");
+
         // 读取建表语句
         String databaseName = YamlUtil.getValueByKey(CONFIG_PATH, "table", "database");
         List<String> owners = YamlUtil.getListByKey(CONFIG_PATH, "table", "owner");
@@ -39,6 +41,7 @@ public class FlinkTable2IceTable {
         List<String> whiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "whiteListB");
         String catalogName = YamlUtil.getValueByKey(CONFIG_PATH, "catalog", "iceberg");
         Boolean deleteOldFlinkTable = YamlUtil.getBooleanValueByKey(CONFIG_PATH, "flink", "deleteOldTable");
+        Long checkpointInterval = Long.valueOf(YamlUtil.getValueByKey(CONFIG_PATH, "flink", "checkpointInterval"));
 
 
         logger.info("jaasConf:{}",jaasConf);
@@ -55,11 +58,14 @@ public class FlinkTable2IceTable {
         logger.info("deleteOldFlinkTable:{}",deleteOldFlinkTable);
         logger.info("owners:{}",owners);
         logger.info("whiteList:{}",whiteList);
+        logger.info("hadoopUserName:{}",hadoopUserName);
+        logger.info("checkpointInternal:{}",checkpointInterval);
 
 //        Configuration conf = new Configuration();
 //        conf.setInteger(RestOptions.PORT, 10000);
         // flink 指定 jaas 必须此配置 用于认证
         System.setProperty("java.security.auth.login.config", jaasConf);
+        System.setProperty("HADOOP_USER_NAME",hadoopUserName);
 
         Properties flinkProps = new Properties();
         flinkProps.setProperty("security.kerberos.krb5-conf.path", krb5Conf);
@@ -71,9 +77,9 @@ public class FlinkTable2IceTable {
         Configuration flinkConfig = new Configuration();
         flinkConfig.addAllToProperties(flinkProps);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(flinkConfig);
-        env.enableCheckpointing(8000L);
+        env.enableCheckpointing(checkpointInterval);
 
-        EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().useBlinkPlanner().build();
+        EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
         StreamTableEnvironment streamTableEnv = StreamTableEnvironment.create(env, settings);
 
         HashMap<String, HashMap<String, String>> sqlMap = null;
