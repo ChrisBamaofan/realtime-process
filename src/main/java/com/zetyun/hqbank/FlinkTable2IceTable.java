@@ -114,13 +114,13 @@ public class FlinkTable2IceTable {
             HashMap<String, String> value = (HashMap<String, String>) entry.getValue();
             String kafkaSql = value.get("KAFKA_" + tableName);
             String iceSql = value.get("ICE_" + tableName);
-            logger.info("kafkaSql:{},iceSql:{},tableName:{}", kafkaSql, iceSql, tableName);
 
             if (CollectionUtils.isNotEmpty(whiteList)) {
                 if (!whiteList.contains(tableName)) {
                     continue;
                 }
             }
+            logger.info("kafkaSql:{},iceSql:{},tableName:{}", kafkaSql, iceSql, tableName);
 
             String sinkTable = catalogName + "." + databaseName + ".ICE_" + tableName;
             String sourceTable = databaseName + ".KAFKA_" + tableName;

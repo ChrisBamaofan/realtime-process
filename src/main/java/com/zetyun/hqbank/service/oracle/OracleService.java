@@ -18,8 +18,8 @@ import java.util.Locale;
  */
 public class OracleService {
 
-//    public static final String CONFIG_PATH = "D:/conf/windows/application.yaml";
-    public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
+    public static final String CONFIG_PATH = "D:/conf/windows/application.yaml";
+//    public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
     private static Connection connection;
     private static final Logger log = LoggerFactory.getLogger(OracleService.class);
 
@@ -38,7 +38,9 @@ public class OracleService {
     public List<String> getTopicNameByDB(String databaseName, String owner) {
         List<String> list = new ArrayList<>();
         try {
-            String sql = "select * from all_tables where owner = '" + owner + "'";
+            // SELECT owner, table_name FROM DBA_TABLES WHERE OWNER in (%s) ORDER BY owner, table_name
+            String sql = "SELECT owner, table_name FROM DBA_TABLES WHERE OWNER ='"+owner+"' ORDER BY owner, table_name";
+
             PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
             ResultSet res = preparedStatement1.executeQuery();
             while (res.next()) {
@@ -63,7 +65,7 @@ public class OracleService {
 
         HashMap<String, HashMap<String, String>> result = new HashMap<>();
         try {
-            String sql = "select * from all_tables where owner = '" + owner + "'";
+            String sql = "SELECT owner, table_name FROM DBA_TABLES WHERE OWNER ='"+owner+"' ORDER BY owner, table_name";
             PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
             ResultSet res = preparedStatement1.executeQuery();
             while (res.next()) {
