@@ -108,13 +108,15 @@ public class DDS2FlinkCDC {
             sourceProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sourceProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sourceProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-//            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
-//                    "    useKeyTab=true\n" +
-//                    "    storeKey=true\n" +
-//                    "    debug=true\n" +
-//                    "    serviceName=kafka\n" +
-//                    "    keyTab=\"" + krb5Keytab + "\"\n" +
-//                    "    principal=\"" + principal + "\";");
+
+            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
+                    "    useKeyTab=true\n" +
+                    "    storeKey=true\n" +
+                    "    debug=true\n" +
+                    "    serviceName=kafka\n" +
+                    "    keyTab=\"" + krb5Keytab + "\"\n" +
+                    "    principal=\"" + principal + "\";");
+// todo 此处可能和 不能自动刷新 tgt有关
 
             // 创建 Kafka 源数据流
             KafkaSource<String> source = KafkaSource.<String>builder()
@@ -141,16 +143,16 @@ public class DDS2FlinkCDC {
             sinkProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sinkProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sinkProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-//            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
-//                    "    useKeyTab=true\n" +
-//                    "    storeKey=true\n" +
-//                    "    debug=true\n" +
-//                    "    serviceName=kafka\n" +
-//                    "    keyTab=\"" + krb5Keytab + "\"\n" +
-//                    "    principal=\"" + principal + "\";");
+            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
+                    "    useKeyTab=true\n" +
+                    "    storeKey=true\n" +
+                    "    debug=true\n" +
+                    "    serviceName=kafka\n" +
+                    "    keyTab=\"" + krb5Keytab + "\"\n" +
+                    "    principal=\"" + principal + "\";");
 
 
-            logger.info("从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
+            logger.info("==> 从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
             // 创建 Kafka 宿数据流
             KafkaSink<String> sink = KafkaSink.<String>builder()
                     .setBootstrapServers(bootstrap)

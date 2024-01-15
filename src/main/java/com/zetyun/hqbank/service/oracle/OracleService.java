@@ -18,8 +18,8 @@ import java.util.Locale;
  */
 public class OracleService {
 
-    public static final String CONFIG_PATH = "D:/conf/windows/application.yaml";
-//    public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
+//    public static final String CONFIG_PATH = "D:/conf/windows/application.yaml";
+    public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
     private static Connection connection;
     private static final Logger log = LoggerFactory.getLogger(OracleService.class);
 

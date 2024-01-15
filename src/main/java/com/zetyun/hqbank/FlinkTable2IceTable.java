@@ -44,28 +44,28 @@ public class FlinkTable2IceTable {
         Long checkpointInterval = Long.valueOf(YamlUtil.getValueByKey(CONFIG_PATH, "flink", "checkpointInterval"));
 
 
-        logger.info("jaasConf:{}",jaasConf);
-        logger.info("krb5Conf:{}",krb5Conf);
-        logger.info("krb5Keytab:{}",krb5Keytab);
-        logger.info("principal:{}",principal);
-        logger.info("bootstrap:{}",bootstrap);
-        logger.info("hiveUri:{}",hiveUri);
-        logger.info("warehouse:{}",warehouse);
-        logger.info("hiveConfDir:{}",hiveConfDir);
-        logger.info("hadoopConfDir:{}",hadoopConfDir);
-        logger.info("databaseName:{}",databaseName);
-        logger.info("catalogName:{}",catalogName);
-        logger.info("deleteOldFlinkTable:{}",deleteOldFlinkTable);
-        logger.info("owners:{}",owners);
-        logger.info("whiteList:{}",whiteList);
-        logger.info("hadoopUserName:{}",hadoopUserName);
-        logger.info("checkpointInternal:{}",checkpointInterval);
+        logger.info("jaasConf:{}", jaasConf);
+        logger.info("krb5Conf:{}", krb5Conf);
+        logger.info("krb5Keytab:{}", krb5Keytab);
+        logger.info("principal:{}", principal);
+        logger.info("bootstrap:{}", bootstrap);
+        logger.info("hiveUri:{}", hiveUri);
+        logger.info("warehouse:{}", warehouse);
+        logger.info("hiveConfDir:{}", hiveConfDir);
+        logger.info("hadoopConfDir:{}", hadoopConfDir);
+        logger.info("databaseName:{}", databaseName);
+        logger.info("catalogName:{}", catalogName);
+        logger.info("deleteOldFlinkTable:{}", deleteOldFlinkTable);
+        logger.info("owners:{}", owners);
+        logger.info("whiteList:{}", whiteList);
+        logger.info("hadoopUserName:{}", hadoopUserName);
+        logger.info("checkpointInternal:{}", checkpointInterval);
 
 //        Configuration conf = new Configuration();
 //        conf.setInteger(RestOptions.PORT, 10000);
         // flink 指定 jaas 必须此配置 用于认证
         System.setProperty("java.security.auth.login.config", jaasConf);
-        System.setProperty("HADOOP_USER_NAME",hadoopUserName);
+        System.setProperty("HADOOP_USER_NAME", hadoopUserName);
 
         Properties flinkProps = new Properties();
         flinkProps.setProperty("security.kerberos.krb5-conf.path", krb5Conf);
@@ -90,7 +90,7 @@ public class FlinkTable2IceTable {
         }
 
         // create hive_catalog
-        logger.info("create iceberg_catalog now!");
+        logger.info("==> create iceberg_catalog now!");
 
         String createCatalog = "create catalog " + catalogName + " with (\n" +
                 "   'type'='iceberg',\n" +
@@ -102,7 +102,7 @@ public class FlinkTable2IceTable {
                 "   'property-version'='2',\n" +
                 "   'warehouse'='" + warehouse + "'" +
                 ")\n";
-        logger.info("catalog:{}", createCatalog);
+        logger.info("==> catalog:{}", createCatalog);
         streamTableEnv.executeSql(createCatalog);
 
         // create database
@@ -120,7 +120,9 @@ public class FlinkTable2IceTable {
                     continue;
                 }
             }
-            logger.info("kafkaSql:{},iceSql:{},tableName:{}", kafkaSql, iceSql, tableName);
+            logger.info("==> tableName:{}", tableName);
+            logger.info("==> kafkaSql:{}", kafkaSql);
+            logger.info("==> iceSql:{}", iceSql);
 
             String sinkTable = catalogName + "." + databaseName + ".ICE_" + tableName;
             String sourceTable = databaseName + ".KAFKA_" + tableName;
@@ -130,16 +132,16 @@ public class FlinkTable2IceTable {
             }
 
             // create flink table with kafka topic
-            logger.info("create flink table with kafka connector:{}", kafkaSql);
+            logger.info("==> create flink table with kafka connector:{}", kafkaSql);
             streamTableEnv.executeSql(kafkaSql);
 
             // create flink table with iceberg
-            logger.info("create flink table with iceberg connector:{}", iceSql);
+            logger.info("==> create flink table with iceberg connector:{}", iceSql);
             streamTableEnv.executeSql(iceSql);
 
             // create sinkTable
             String insertSql = "insert into " + sinkTable + "  select * from " + sourceTable;
-            logger.info("insert :{}", insertSql);
+            logger.info("==> insert :{}", insertSql);
             streamTableEnv.executeSql(insertSql);
         }
     }
