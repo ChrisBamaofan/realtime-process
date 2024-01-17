@@ -39,6 +39,7 @@ public class FlinkTable2IceTable {
         String bootstrap = YamlUtil.getValueByKey(CONFIG_PATH, "kafka", "bootstrap");
         // 白名单，如果不为空，则建立所有表的流
         List<String> whiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "whiteListB");
+        List<String> tableWhiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "tableWhiteListB");
         String catalogName = YamlUtil.getValueByKey(CONFIG_PATH, "catalog", "iceberg");
         Boolean deleteOldFlinkTable = YamlUtil.getBooleanValueByKey(CONFIG_PATH, "flink", "deleteOldTable");
         Long checkpointInterval = Long.valueOf(YamlUtil.getValueByKey(CONFIG_PATH, "flink", "checkpointInterval"));
@@ -86,7 +87,7 @@ public class FlinkTable2IceTable {
         OracleService oracleTrigger = new OracleService();
         for (int j = 0; j < owners.size(); j++) {
             String owner = owners.get(j);
-            sqlMap = oracleTrigger.generateSql(catalogName, databaseName, owner, bootstrap);
+            sqlMap = oracleTrigger.generateSql(catalogName, databaseName, owner, bootstrap,tableWhiteList);
         }
 
         // create hive_catalog

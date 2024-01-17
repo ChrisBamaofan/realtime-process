@@ -1,6 +1,7 @@
 package com.zetyun.hqbank.service.oracle;
 
 import com.zetyun.hqbank.util.YamlUtil;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +62,7 @@ public class OracleService {
     }
 
     // DDS_T01, <KAFKA_DDS_T01,kafkaSql> <ICE_DDS_T01,iceSQL>
-    public HashMap<String, HashMap<String, String>> generateSql(String catalogName, String database, String owner, String bootstrap) {
+    public HashMap<String, HashMap<String, String>> generateSql(String catalogName, String database, String owner, String bootstrap,List<String> whiteList) {
 
         HashMap<String, HashMap<String, String>> result = new HashMap<>();
         try {
@@ -70,6 +71,11 @@ public class OracleService {
             ResultSet res = preparedStatement1.executeQuery();
             while (res.next()) {
                 String tableName = res.getString(2);
+                if (CollectionUtils.isNotEmpty(whiteList)) {
+                    if (!whiteList.contains(tableName)) {
+                        continue;
+                    }
+                }
 
                 StringBuilder kafkaDDLSql = new StringBuilder();
                 kafkaDDLSql.append("CREATE TABLE if not exists ");

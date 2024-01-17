@@ -50,6 +50,7 @@ public class DDS2FlinkCDC {
         String bootstrap = YamlUtil.getValueByKey(CONFIG_PATH, "kafka", "bootstrap");
         String database = YamlUtil.getValueByKey(CONFIG_PATH, "table", "database");
         List<String> owners = YamlUtil.getListByKey(CONFIG_PATH, "table", "owner");
+        Boolean hasKrbProperty = YamlUtil.getBooleanValueByKey(CONFIG_PATH, "kafka", "hasKrb");
         // 白名单配置
         List<String> whiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "whiteListA");
 
@@ -109,13 +110,16 @@ public class DDS2FlinkCDC {
             sourceProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sourceProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
 
-            sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
-                    "    useKeyTab=true\n" +
-                    "    storeKey=true\n" +
-                    "    debug=true\n" +
-                    "    serviceName=kafka\n" +
-                    "    keyTab=\"" + krb5Keytab + "\"\n" +
-                    "    principal=\"" + principal + "\";");
+            if (hasKrbProperty){
+                sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
+                        "    useKeyTab=true\n" +
+                        "    storeKey=true\n" +
+                        "    debug=true\n" +
+                        "    serviceName=kafka\n" +
+                        "    keyTab=\"" + krb5Keytab + "\"\n" +
+                        "    principal=\"" + principal + "\";");
+            }
+
 // todo 此处可能和 不能自动刷新 tgt有关
 
             // 创建 Kafka 源数据流
@@ -143,13 +147,16 @@ public class DDS2FlinkCDC {
             sinkProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sinkProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sinkProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-            sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
-                    "    useKeyTab=true\n" +
-                    "    storeKey=true\n" +
-                    "    debug=true\n" +
-                    "    serviceName=kafka\n" +
-                    "    keyTab=\"" + krb5Keytab + "\"\n" +
-                    "    principal=\"" + principal + "\";");
+            if (hasKrbProperty){
+                sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
+                        "    useKeyTab=true\n" +
+                        "    storeKey=true\n" +
+                        "    debug=true\n" +
+                        "    serviceName=kafka\n" +
+                        "    keyTab=\"" + krb5Keytab + "\"\n" +
+                        "    principal=\"" + principal + "\";");
+            }
+
 
 
             logger.info("==> 从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
