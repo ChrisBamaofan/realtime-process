@@ -99,7 +99,7 @@ public class DDS2FlinkCDC {
                     continue;
                 }
             }
-
+            String schema = s[0];
             String sinkTopic = s[1].toUpperCase(Locale.ROOT) + "_" + s[2].toUpperCase(Locale.ROOT);
             // 设置 Kafka 源相关参数
             Properties sourceProps = new Properties();
@@ -138,7 +138,7 @@ public class DDS2FlinkCDC {
             // 对每条数据进行反序列化和处理
             DataStream<String> processedStream = sourceStream.map(data -> {
                 logger.info("==> get data from kafka [get crud] :{}", data);
-                return processData(data);
+                return processData(data,schema);
             });
 
 
@@ -178,26 +178,32 @@ public class DDS2FlinkCDC {
 
     }
 
-    private static String processData(String input) {
+    private static String processData(String input,String schema) {
         ObjectMapper om = new ObjectMapper();
+        DDSPayload p = new DDSPayload();
+        DDSPayload dummy = p.createDummy(schema);
         if (StringUtils.isEmpty(input)) {
-            DDSPayload p = new DDSPayload();
             try {
-                return om.writeValueAsString(p);
+                return om.writeValueAsString(dummy);
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
-            return null;
         }
         try {
             DDSData ddsData = om.readValue(input, DDSData.class);
+            if (StringUtils.equalsIgnoreCase(ddsData.getPayload().getOp(),"ddl")){
+                ddsData.getPayload().setSql(null);
+                ddsData.getPayload().setOp("c");
+//                HashMap<String,Object> o = new HashMap<>();
+//                ddsData.getPayload().setAfter(o);
+                return om.writeValueAsString(ddsData.getPayload());
+            }
             return om.writeValueAsString(ddsData.getPayload());
         } catch (IOException e) {
             logger.error("[processData] 异常情况！", e);
         }
-        DDSPayload p = new DDSPayload();
         try {
-            return om.writeValueAsString(p);
+            return om.writeValueAsString(dummy);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
