@@ -9,6 +9,7 @@ import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.DeliveryGuarantee;
@@ -139,6 +140,13 @@ public class DDS2FlinkCDC {
             DataStream<String> processedStream = sourceStream.map(data -> {
                 logger.info("==> get data from kafka [get crud] :{}", data);
                 return processData(data,schema);
+            }).filter(new FilterFunction<String>() {
+                @Override
+                public boolean filter(String value) throws Exception {
+                    ObjectMapper om = new ObjectMapper();
+                    DDSPayload ddsPayload = om.readValue(value, DDSPayload.class);
+                    return !"ddl".equals(ddsPayload.getOp());
+                }
             });
 
 
@@ -191,13 +199,6 @@ public class DDS2FlinkCDC {
         }
         try {
             DDSData ddsData = om.readValue(input, DDSData.class);
-            if (StringUtils.equalsIgnoreCase(ddsData.getPayload().getOp(),"ddl")){
-                ddsData.getPayload().setSql(null);
-                ddsData.getPayload().setOp("c");
-//                HashMap<String,Object> o = new HashMap<>();
-//                ddsData.getPayload().setAfter(o);
-                return om.writeValueAsString(ddsData.getPayload());
-            }
             return om.writeValueAsString(ddsData.getPayload());
         } catch (IOException e) {
             logger.error("[processData] 异常情况！", e);

@@ -1,7 +1,6 @@
 package com.zetyun.hqbank.bean.dds;
 
 import lombok.Data;
-import org.json.JSONObject;
 
 import java.util.HashMap;
 
