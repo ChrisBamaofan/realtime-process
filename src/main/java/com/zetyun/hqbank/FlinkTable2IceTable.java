@@ -95,11 +95,8 @@ public class FlinkTable2IceTable {
 
         String createCatalog = "create catalog " + catalogName + " with (\n" +
                 "   'type'='iceberg',\n" +
-                "   'catalog-type'='hive',\n" +
-                "   'uri'='" + hiveUri + "',\n" +
-                "   'hive-conf-dir'='" + hiveConfDir + "',\n" +
-                "   'hadoop-conf-dir'='" + hadoopConfDir + "',\n" +
-                "   'client'='1',\n" +
+                "   'catalog-type'='hadoop',\n" +
+                "   'client'='5',\n" +
                 "   'property-version'='2',\n" +
                 "   'warehouse'='" + warehouse + "'" +
                 ")\n";
