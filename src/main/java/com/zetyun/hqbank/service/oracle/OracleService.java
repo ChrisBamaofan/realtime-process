@@ -1,6 +1,8 @@
 package com.zetyun.hqbank.service.oracle;
 
+import com.zetyun.hqbank.bean.flink.FlinkTableMap;
 import com.zetyun.hqbank.util.YamlUtil;
+//import com.zetyun.rt.jasyptwrapper.Jasypt;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -8,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -19,27 +20,22 @@ import java.util.Locale;
  */
 public class OracleService {
 
-//    public static final String CONFIG_PATH = "D:/conf/windows/application.yaml";
-    public static final String CONFIG_PATH = "/opt/flink-on-yarn/conf/application.yaml";
     private static Connection connection;
     private static final Logger log = LoggerFactory.getLogger(OracleService.class);
 
-    public static void main(String[] args) {
+//    public static void main(String[] args) {
+//
+//        OracleService how2ObtainFieldInfoFromJdbc = new OracleService();
+//        // 第一种方式：执行sql语句获取 select * from user_pop_info where 1 = 2
+//        how2ObtainFieldInfoFromJdbc.method1();
+//    }
 
-        OracleService how2ObtainFieldInfoFromJdbc = new OracleService();
-        // 第一种方式：执行sql语句获取 select * from user_pop_info where 1 = 2
-        how2ObtainFieldInfoFromJdbc.method1();
-        // 第二种方式：执行sql语句获取 show create table user_pop_info
-//        how2ObtainFieldInfoFromJdbc.method2();
-        // 第二种方式：直接从jdbc数据库连接Connection实例中获取
-//        how2ObtainFieldInfoFromJdbc.method3();
-    }
-
-    // orcl-dds-***  => DDS_T01
-    public List<String> getTopicNameByDB(String databaseName, String owner) {
+    // 组装 作业A 从这些topic中拿 数据
+    // orcl-dds-t_zhj2
+    public List<String> getTopicNameByDB(String userConfigPath,String databaseName, String owner) {
+        getConnection(userConfigPath);
         List<String> list = new ArrayList<>();
         try {
-            // SELECT owner, table_name FROM DBA_TABLES WHERE OWNER in (%s) ORDER BY owner, table_name
             String sql = "SELECT owner, table_name FROM DBA_TABLES WHERE OWNER ='"+owner+"' ORDER BY owner, table_name";
 
             PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
@@ -52,7 +48,6 @@ public class OracleService {
                 sb.append("-");
                 sb.append(res.getString(2).toLowerCase(Locale.ROOT));
                 list.add(sb.toString());
-                log.info("owner: " + res.getString(1) + " tableName: " + res.getString(2));
             }
         } catch (RuntimeException | SQLException exception) {
             log.error("error occur!", exception);
@@ -61,40 +56,53 @@ public class OracleService {
         return list;
     }
 
-    // DDS_T01, <KAFKA_DDS_T01,kafkaSql> <ICE_DDS_T01,iceSQL>
-    public HashMap<String, HashMap<String, String>> generateSql(String catalogName, String database, String owner, String bootstrap,List<String> whiteList) {
-
-        HashMap<String, HashMap<String, String>> result = new HashMap<>();
+    // target-orcl-dds-t_zhj2, <kafka_target-orcl-dds-t_zhj2,kafkaSql> <ice_target-orcl-dds-t_zhj2,iceSQL>
+    public List<FlinkTableMap> generateSql(String catalogName, String database, String owner,
+                                           String bootstrap, List<String> whiteList, String path) {
+        getConnection(path);
+        List<FlinkTableMap> result = new ArrayList<>();
         try {
+
             String sql = "SELECT owner, table_name FROM DBA_TABLES WHERE OWNER ='"+owner+"' ORDER BY owner, table_name";
             PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
             ResultSet res = preparedStatement1.executeQuery();
+
+            database = database.toLowerCase(Locale.ROOT);
+            owner = owner.toLowerCase(Locale.ROOT);
             while (res.next()) {
                 String tableName = res.getString(2);
+
                 if (CollectionUtils.isNotEmpty(whiteList)) {
-                    if (!whiteList.contains(tableName)) {
+                    if (!whiteList.contains(tableName.toLowerCase(Locale.ROOT))) {
                         continue;
                     }
                 }
 
+                tableName = tableName.toLowerCase(Locale.ROOT);
+                FlinkTableMap flinkTableMap = new FlinkTableMap();
+                String kafkaTableName = "kafka_"+database+"_"+owner+"_"+tableName;
+                flinkTableMap.setKafkaTableName(kafkaTableName);
+                String iceTableName = "ice_"+database+"_"+owner+"_"+tableName;
+                flinkTableMap.setIceTableName(iceTableName);
+                String newKafkaTopicName = "target-"+database+"-"+owner+"-"+tableName;
+                flinkTableMap.setTopicName(newKafkaTopicName);
+
                 StringBuilder kafkaDDLSql = new StringBuilder();
                 kafkaDDLSql.append("CREATE TABLE if not exists ");
-                kafkaDDLSql.append(database).append(".KAFKA_").append(owner.toUpperCase(Locale.ROOT));
+                kafkaDDLSql.append(database).append(".kafka_").append(database).append("_").append(owner);
                 kafkaDDLSql.append("_");
-                kafkaDDLSql.append(tableName.toUpperCase(Locale.ROOT)).append(" ( ");
+                kafkaDDLSql.append(tableName).append(" ( ");
 
                 StringBuilder icebergSql = new StringBuilder();
                 icebergSql.append("CREATE TABLE if not exists ");
                 icebergSql.append(catalogName).append(".").append(database)
-                        .append(".ICE_").append(owner.toUpperCase(Locale.ROOT)).append("_")
-                        .append(tableName.toUpperCase(Locale.ROOT)).append(" ( ");
+                        .append(".ice_").append(database).append("_").append(owner).append("_")
+                        .append(tableName).append(" ( ");
 
                 // 获取字段
-                String cdcSourceTopic = owner.toUpperCase(Locale.ROOT) + "_" + tableName.toUpperCase(Locale.ROOT);
-                HashMap<String, String> sqlResults = getColumns(database, owner, tableName, kafkaDDLSql, icebergSql,
-                        cdcSourceTopic, bootstrap);
-                result.put(cdcSourceTopic, sqlResults);
-
+                flinkTableMap = getColumns(database, owner, tableName, kafkaDDLSql, icebergSql,
+                        newKafkaTopicName.toLowerCase(Locale.ROOT), bootstrap,flinkTableMap);
+                result.add(flinkTableMap);
             }
         } catch (RuntimeException | SQLException runtimeException) {
             log.error("error", runtimeException);
@@ -102,21 +110,12 @@ public class OracleService {
         return result;
     }
 
-    /**
-     *
-     * @param database
-     * @param owner
-     * @param table
-     * @param kafkaSql
-     * @param iceSql
-     * @return
-     */
-    // DDS_T01, <KAFKA_DDS_T01,kafkaSql> <ICE_DDS_T01,iceSQL>
-    public HashMap<String, String> getColumns(String database, String owner, String table,
+    public FlinkTableMap getColumns(String userConfigPath, String owner, String table,
                                               StringBuilder kafkaSql, StringBuilder iceSql,
-                                              String topic, String bootstrap) {
-        HashMap<String, String> result = new HashMap<>();
+                                              String sinkTopic, String bootstrap,FlinkTableMap flinkTableMap) {
+        getConnection(userConfigPath);
         try {
+
             PreparedStatement preparedStatement = connection.prepareStatement("select * from " + owner + "." + table + " where 1 = 2");
             ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
             String uniqueIdColumnName = "";
@@ -142,21 +141,23 @@ public class OracleService {
             if (StringUtils.isEmpty(uniqueIdColumnName)) {
                 uniqueIdColumnName = firstColumnName;
             }
+
             String key = "PRIMARY KEY (`_KEY_`) NOT ENFORCED ) PARTITIONED BY (`_KEY_`) WITH (";
             key = key.replace("_KEY_", uniqueIdColumnName);
             kafkaSql.append(key);
             iceSql.append(key);
             iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop')");
             String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.sasl.kerberos.service.name' = 'kafka','properties.sasl.mechanism' = 'GSSAPI','properties.security.protocol' = 'SASL_PLAINTEXT','properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
-            kafkaPrefix = kafkaPrefix.replace("_TOPIC_", topic).replace("_BOOTSTRAP_", bootstrap);
+            kafkaPrefix = kafkaPrefix.replace("_TOPIC_", sinkTopic).replace("_BOOTSTRAP_", bootstrap);
             kafkaSql.append(kafkaPrefix);
-            result.put("KAFKA_" + topic, kafkaSql.toString());
-            result.put("ICE_" + topic, iceSql.toString());
+            // target-orcl-dds-t_zhj2, <kafka_target-orcl-dds-t_zhj2,kafkaSql> <ice_target-orcl-dds-t_zhj2,iceSQL>
+            flinkTableMap.setKafkaSql(kafkaSql.toString());
+            flinkTableMap.setIceSql(iceSql.toString());
 
         } catch (Exception e) {
             log.error("method1 error ", e);
         }
-        return result;
+        return flinkTableMap;
     }
 
     public String getColumnType(String columnClassName) {
@@ -196,54 +197,51 @@ public class OracleService {
 
 
     private void method1() {
-
         try {
-//            PreparedStatement preparedStatement1 = connection.prepareStatement("select * from all_tables where owner = 'DBMGR'");
-//            ResultSet res  = preparedStatement1.executeQuery();
-//            while(res.next()){
-//                System.out.println(
-//                        "owner: " + res.getString(1) + " tableName: " + res.getString(2)
-//                );
-//            }
-            // orcl-dds-t01,T01
-            //
-
             PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.T_BIG where 1 = 2");
             ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
 
             for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
-
-//                log.info("数据库实例名:{}", resultSetMetaData.getCatalogName(i + 1));
-//                log.info("表名:{}", resultSetMetaData.getTableName(i + 1));
                 log.info("java类型:{}", resultSetMetaData.getColumnClassName(i + 1));
                 log.info("数据库类型:{}", resultSetMetaData.getColumnTypeName(i + 1));
                 log.info("字段名称:{}", resultSetMetaData.getColumnName(i + 1));
-//                log.info("字段长度:{}", resultSetMetaData.getColumnDisplaySize(i + 1));
-//                log.info("getColumnType:{}", resultSetMetaData.getColumnType(i + 1));
-//                log.info("getPrecision:{}", resultSetMetaData.getPrecision(i + 1));
-//                log.info("getScale:{}", resultSetMetaData.getScale(i + 1));
-//                log.info("getSchemaName:{}", resultSetMetaData.getSchemaName(i + 1));
-//                log.info("getScale:{}", resultSetMetaData.getScale(i + 1));
             }
         } catch (Exception e) {
             log.error("method1 error ", e);
         }
     }
 
-
-    static {
+    public void getConnection(String path){
         try {
-            String url = YamlUtil.getValueByKey(CONFIG_PATH, "oracle", "url");
-            String username = YamlUtil.getValueByKey(CONFIG_PATH, "oracle", "username");
-            String password = YamlUtil.getValueByKey(CONFIG_PATH, "oracle", "password");
+            if (connection != null){
+                return;
+            }
+            String url = YamlUtil.getValueByKey(path, "oracle", "url");
+            String username = YamlUtil.getValueByKey(path, "oracle", "username");
+            String password = YamlUtil.getValueByKey(path, "oracle", "password");
             Class.forName("oracle.jdbc.driver.OracleDriver");
             // 连接到数据库
             connection = DriverManager.getConnection(url, username, password);
         } catch (Exception e) {
             log.error("autoCodeGeneratorProcess error ", e);
         }
-
     }
+
+//
+//public static final String key = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAJnBfLtWamZ3hKPcmsoDTGBmOc6H/fsfZStPTOj7R6x5/XP628vN6LHRACk99hg3yYbah+pHfzzDe4U1EWSsC418cRCBoxZZp6SHBbIkpwgbdXNmA6R3iJd6FlEuwwSFcNwPYQ0xv7U6UUTrYmWCCoUa+KFY9cbYkSsa06+ykemxAgMBAAECgYAXbPxVCpCBdho2YQkQWDpNwaVzCxMuLJVcaOOd55L++0MbZZARWBjo5p/wqKkS/YTtz+O/VQ9Usa/jFrfEr9W+htMYHIWbJTXWsvE18vs022ciybkP4Fx00Ljs7qll+dkIZtYql3cqo1ndXQQ8qpruzqaKMVoXv9riE57+P2gUQQJBAOE2+mUIAizvaXPHuq6FF7a3DT5hgmo+8Sba9Dtzvz54nxkb8J1TlJjsA1YNZDhvl/AWtI5E22EPZR2ctDUh5XkCQQCuxeuPzn4Q9B/g3WOtLKJpTr0ZM+XeGroP6XUCh8l9Cnx/WB/YZWhT9FoLo11BuAP4hQp1TsXu90a09rxbnK/5AkApTmAWb6WWgEKjDZrbr2VuCZzQOConOmwYaEgrL0uANbdYb5tt/4pdkcv62HHtN+pyCngLL+3cm2o8SCV1KUZhAkApEuabc2H5RgY/6IfGaRj6OsECLUo2en2Dw8/1+keGFXLQ0rsZNivgnyqSVaBTE5YLT+j3TL4DvSVm3h3CQf6xAkEAvdgMSzfESqPZHQZ/u03JyzaMb4RF3ma86jHaf6Uxs2QvsplgjKACpUvYWSgrcgfnrpAgcSVLH6veLaJo6uF6RA==";
+//    public static void main(String[] args) {
+////        StandardPBEStringEncryptor encryptorencryptor = new StandardPBEStringEncryptor();
+////        EnvironmentStringPBEConfig config = new EnvironmentStringPBEConfig();
+////        config.setAlgorithm("PEM");
+////        //自己在用的时候更改此密码
+////        config.setPassword(key);
+////        encryptorencryptor.setConfig(config);
+//
+//        String value="iSnddL2XEPD01WDUNYjDdGU/eLGRZ+1IvuJU3cL9bQNbWbd5LPuUxbgypC5LnkyQ4m8dOoH2FQQK2SupW0yh5QLptVf33X4oqHQwFbI6SqKQZzagJk9G68jSMESqy4bRacjWyr+NOJ+Br0EAvAfPZsc14KaL5kTGEAw5L8aWARo=";
+//
+//        String enPwd = Jasypt.decrypt(value);
+//        System.out.println(enPwd);
+//    }
 
 }
 

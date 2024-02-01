@@ -1,8 +1,11 @@
 package com.zetyun.hqbank;
 
+import com.zetyun.hqbank.bean.flink.FlinkTableMap;
 import com.zetyun.hqbank.service.oracle.OracleService;
+import com.zetyun.hqbank.util.KafkaUtil;
 import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
@@ -12,58 +15,48 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static com.zetyun.hqbank.service.oracle.OracleService.CONFIG_PATH;
-
-
+// --userConfig D:/conf/windows/userConfig.yaml --systemConfig D:/conf/windows/systemConfig.yaml
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
 
     public static void main(String[] args) {
         // kerberos 认证配置
-        String jaasConf = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "jaasConf");
-        String krb5Conf = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "krb5Conf");
-        String krb5Keytab = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "krb5Keytab");
-        String principal = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "principal");
+        ParameterTool parameters = ParameterTool.fromArgs(args);
+        String userConfigPATH = parameters.get("userConfig");
+        String systemConfigPath = parameters.get("systemConfig");
+        logger.info("userConfigPath:{},systemConfigPath:{}",userConfigPATH,systemConfigPath);
 
-        // catalog 配置信息
-        String hiveUri = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "hiveUri");
-        String warehouse = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "warehouse");
-        String hiveConfDir = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "hiveConfDir");
-        String hadoopConfDir = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "hadoopConfDir");
-        String hadoopUserName = YamlUtil.getValueByKey(CONFIG_PATH, "hadoop", "loginUserName");
-
-        // 读取建表语句
-        String databaseName = YamlUtil.getValueByKey(CONFIG_PATH, "table", "database");
-        List<String> owners = YamlUtil.getListByKey(CONFIG_PATH, "table", "owner");
-        // kafka 配置
-        String bootstrap = YamlUtil.getValueByKey(CONFIG_PATH, "kafka", "bootstrap");
+        List<String> owners = YamlUtil.getListByKey(userConfigPATH, "table", "owner");
+        String bootstrap = YamlUtil.getValueByKey(systemConfigPath, "kafka", "bootstrap");
         // 白名单，如果不为空，则建立所有表的流
-        List<String> whiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "whiteListB");
-        List<String> tableWhiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "tableWhiteListB");
-        String catalogName = YamlUtil.getValueByKey(CONFIG_PATH, "catalog", "iceberg");
-        Boolean deleteOldFlinkTable = YamlUtil.getBooleanValueByKey(CONFIG_PATH, "flink", "deleteOldTable");
-        Long checkpointInterval = Long.valueOf(YamlUtil.getValueByKey(CONFIG_PATH, "flink", "checkpointInterval"));
+        List<String> tables = YamlUtil.getListByKey(userConfigPATH, "table", "tableNames");
+        String oracleUri = YamlUtil.getValueByKey(userConfigPATH, "oracle", "url");
+        String[] parts = oracleUri.split("/");
+        String databaseName = parts[1];
 
+        List<String> whiteList = KafkaUtil.getKafkaTopicB(databaseName,owners.get(0),tables,"target");
+        String catalogName = YamlUtil.getValueByKey(systemConfigPath, "catalog", "iceberg");
+        Long checkpointInterval = Long.valueOf(YamlUtil.getValueByKey(userConfigPATH, "flink", "checkpointInterval"));
+        String warehouse = YamlUtil.getValueByKey(userConfigPATH, "hadoop", "warehouse");
+
+        String jaasConf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "jaasConf");
+        String krb5Conf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "krb5Conf");
+        String krb5Keytab = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "krb5Keytab");
+        String principal = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "principal");
+        String hadoopUserName = YamlUtil.getValueByKey(systemConfigPath, "hadoop", "loginUserName");
 
         logger.info("jaasConf:{}", jaasConf);
         logger.info("krb5Conf:{}", krb5Conf);
         logger.info("krb5Keytab:{}", krb5Keytab);
         logger.info("principal:{}", principal);
         logger.info("bootstrap:{}", bootstrap);
-        logger.info("hiveUri:{}", hiveUri);
         logger.info("warehouse:{}", warehouse);
-        logger.info("hiveConfDir:{}", hiveConfDir);
-        logger.info("hadoopConfDir:{}", hadoopConfDir);
         logger.info("databaseName:{}", databaseName);
         logger.info("catalogName:{}", catalogName);
-        logger.info("deleteOldFlinkTable:{}", deleteOldFlinkTable);
         logger.info("owners:{}", owners);
-        logger.info("whiteList:{}", whiteList);
         logger.info("hadoopUserName:{}", hadoopUserName);
         logger.info("checkpointInternal:{}", checkpointInterval);
 
-//        Configuration conf = new Configuration();
-//        conf.setInteger(RestOptions.PORT, 10000);
         // flink 指定 jaas 必须此配置 用于认证
         System.setProperty("java.security.auth.login.config", jaasConf);
         System.setProperty("HADOOP_USER_NAME", hadoopUserName);
@@ -83,11 +76,15 @@ public class FlinkTable2IceTable {
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
         StreamTableEnvironment streamTableEnv = StreamTableEnvironment.create(env, settings);
 
-        HashMap<String, HashMap<String, String>> sqlMap = null;
+        // target-orcl-dds-t_zhj2,<"ice_sql","">
+        // target-orcl-dds-t_zhj2,target_orcl_dds_t_zhj2
+//        HashMap<String, HashMap<String, String>> sqlMap = null;
+        List<FlinkTableMap> flinkTableMaps = new ArrayList<>();
+        HashMap<String,String> tableMap = null;
         OracleService oracleTrigger = new OracleService();
         for (int j = 0; j < owners.size(); j++) {
             String owner = owners.get(j);
-            sqlMap = oracleTrigger.generateSql(catalogName, databaseName, owner, bootstrap,tableWhiteList);
+            flinkTableMaps = oracleTrigger.generateSql(catalogName, databaseName, owner, bootstrap,tables,userConfigPATH);
         }
 
         // create hive_catalog
@@ -107,27 +104,22 @@ public class FlinkTable2IceTable {
         streamTableEnv.executeSql("create database if not exists " + catalogName + "." + databaseName);
         streamTableEnv.executeSql("create database if not exists " + databaseName);
 
-        for (Map.Entry entry : sqlMap.entrySet()) {
-            String tableName = (String) entry.getKey();
-            HashMap<String, String> value = (HashMap<String, String>) entry.getValue();
-            String kafkaSql = value.get("KAFKA_" + tableName);
-            String iceSql = value.get("ICE_" + tableName);
+        for (FlinkTableMap bean: flinkTableMaps) {
+            String sinkTopicName = bean.getTopicName();
+            String kafkaSql = bean.getKafkaSql();
+            String iceSql = bean.getIceSql();
 
             if (CollectionUtils.isNotEmpty(whiteList)) {
-                if (!whiteList.contains(tableName)) {
+                if (!whiteList.contains(sinkTopicName)) {
                     continue;
                 }
             }
-            logger.info("==> tableName:{}", tableName);
+            logger.info("==> sinkTopicName:{}", sinkTopicName);
             logger.info("==> kafkaSql:{}", kafkaSql);
             logger.info("==> iceSql:{}", iceSql);
 
-            String sinkTable = catalogName + "." + databaseName + ".ICE_" + tableName;
-            String sourceTable = databaseName + ".KAFKA_" + tableName;
-            if (deleteOldFlinkTable) {
-                streamTableEnv.executeSql("drop table if exists " + sourceTable);
-                streamTableEnv.executeSql("drop table if exists " + sinkTable);
-            }
+            String sourceTable = databaseName + "."+bean.getKafkaTableName();
+            String sinkTable = catalogName + "." + databaseName + "." + bean.getIceTableName();
 
             // create flink table with kafka topic
             logger.info("==> create flink table with kafka connector:{}", kafkaSql);

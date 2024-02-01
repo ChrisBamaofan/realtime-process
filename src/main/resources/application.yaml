@@ -36,8 +36,3 @@ hadoop:
   hiveConfDir: /etc/hive/conf.cloudera.hive/
   hadoopConfDir: /etc/hadoop/conf.cloudera.yarn/
 
-
-#  //        String hiveConfDir = "/etc/hive/conf.cloudera.hive/";
-#  //        String hadoopConfDir = "/etc/hadoop/conf.cloudera.yarn/";
-#  //        String hiveConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-46";
-#  //        String hadoopConfDir = "D:\\workspace\\iceberg-demo\\config\\hive-conf-46";

@@ -53,18 +53,16 @@ public class YamlUtil {
         }else{
             LinkedHashMap<String,String> rootProperty= (LinkedHashMap<String, String>) properties.get(root);
             value=iter(rootProperty,key);
-
         }
         return value;
     }
+
     public static Boolean getBooleanValueByKey(String yamlName,String root,String key){
         getYamlMap(yamlName);
         Boolean value=null;
 
-            LinkedHashMap<String,String> rootProperty= (LinkedHashMap<String, String>) properties.get(root);
-            value=booleanIter(rootProperty,key);
-
-
+        LinkedHashMap<String,String> rootProperty= (LinkedHashMap<String, String>) properties.get(root);
+        value=booleanIter(rootProperty,key);
         return value;
     }
 
@@ -74,12 +72,12 @@ public class YamlUtil {
         while(it.hasNext()) {
             Map.Entry entry = (Map.Entry) it.next();
             if (key.equals(entry.getKey())) {
-
                 return (List<String>) entry.getValue();
             }
         }
         return value;
     }
+
     public static String iter(LinkedHashMap<String,String> rootProperty, String key){
         Iterator it = rootProperty.entrySet().iterator();
         String value=null;
@@ -106,7 +104,6 @@ public class YamlUtil {
         while(it.hasNext()){
             Map.Entry entry=(Map.Entry) it.next();
             if(key.equals(entry.getKey())){
-
                 return (Boolean)entry.getValue();
             }
         }

@@ -5,12 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zetyun.hqbank.bean.dds.DDSData;
 import com.zetyun.hqbank.bean.dds.DDSPayload;
 import com.zetyun.hqbank.service.oracle.OracleService;
+import com.zetyun.hqbank.util.KafkaUtil;
 import com.zetyun.hqbank.util.YamlUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
@@ -20,8 +22,6 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.slf4j.Logger;
@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 
-import static com.zetyun.hqbank.service.oracle.OracleService.CONFIG_PATH;
 
 /**
  * flink datastream 将数据从 topic1 发送到 topic2,中间将数据清洗
@@ -42,18 +41,23 @@ public class DDS2FlinkCDC {
     private static final Logger logger = LoggerFactory.getLogger(DDS2FlinkCDC.class);
 
     public static void main(String[] args) throws Exception {
+        ParameterTool parameters = ParameterTool.fromArgs(args);
+        String userConfigPath = parameters.get("userConfig");
+        String systemConfigPath = parameters.get("systemConfig");
+
         // 设置 Flink 环境
-        String jaasConf = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "jaasConf");
-        String krb5Conf = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "krb5Conf");
-        String krb5Keytab = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "krb5Keytab");
-        String principal = YamlUtil.getValueByKey(CONFIG_PATH, "kerberos", "principal");
-        // 数据库配置
-        String bootstrap = YamlUtil.getValueByKey(CONFIG_PATH, "kafka", "bootstrap");
-        String database = YamlUtil.getValueByKey(CONFIG_PATH, "table", "database");
-        List<String> owners = YamlUtil.getListByKey(CONFIG_PATH, "table", "owner");
-        Boolean hasKrbProperty = YamlUtil.getBooleanValueByKey(CONFIG_PATH, "kafka", "hasKrb");
-        // 白名单配置
-        List<String> whiteList = YamlUtil.getListByKey(CONFIG_PATH, "table", "whiteListA");
+        String jaasConf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "jaasConf");
+        String krb5Conf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "krb5Conf");
+        String krb5Keytab = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "krb5Keytab");
+        String principal = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "principal");
+        String bootstrap = YamlUtil.getValueByKey(systemConfigPath, "kafka", "bootstrap");
+        // db config
+        String oracleUri = YamlUtil.getValueByKey(userConfigPath, "oracle", "url");
+        String[] parts = oracleUri.split("/");//todo 这里改成 /
+        String database = parts[1];
+        List<String> owners = YamlUtil.getListByKey(userConfigPath, "table", "owner");
+        List<String> tables = YamlUtil.getListByKey(userConfigPath, "table", "tableNames");
+        List<String> whiteList = KafkaUtil.getKafkaTopic(database,owners.get(0),tables);
 
         logger.info("jaasConf:{}", jaasConf);
         logger.info("krb5Conf:{}", krb5Conf);
@@ -73,55 +77,39 @@ public class DDS2FlinkCDC {
         flinkProps.setProperty("security.kerberos.login.keytab", krb5Keytab);
         flinkProps.setProperty("security.kerberos.login.principal", principal);
         flinkProps.setProperty("security.kerberos.login.contexts", "Client,KafkaClient");
-        flinkProps.setProperty("security.kerberos.login.use-ticket-cache", "false");
         flinkProps.setProperty("state.backend", "hashmap");
 
         Configuration flinkConfig = new Configuration();
         flinkConfig.addAllToProperties(flinkProps);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(flinkConfig);
 
-
         List<String> topic = new ArrayList<>();
         OracleService oracleTrigger = new OracleService();
-
+        // 从指定的库以及 owner下 拼接出 所有的 dds写入的 topic名
         for (String owner : owners) {
-            List<String> topicNameByDB = oracleTrigger.getTopicNameByDB(database, owner);
+            List<String> topicNameByDB = oracleTrigger.getTopicNameByDB(userConfigPath,database, owner);
             if (CollectionUtils.isNotEmpty(topicNameByDB)) {
                 topic.addAll(topicNameByDB);
             }
         }
 
-//        String sinkTopic="orcl-dds-t_zhj2";
-//        String sourceTopic="DDS_T_ZHJ2";
+        // 从指定的库以及 owner下 拼接出 所有的 dds写入的 topic名,orcl-dds-t_zhj2
         for (String sourceTopic : topic) {
-            String[] s = sourceTopic.split("-");
             if (CollectionUtils.isNotEmpty(whiteList)) {
                 if (!whiteList.contains(sourceTopic)) {
                     continue;
                 }
             }
-            String schema = s[0];
-            String sinkTopic = s[1].toUpperCase(Locale.ROOT) + "_" + s[2].toUpperCase(Locale.ROOT);
+            // target-orcl-dds-t_zhj2
+            String sinkTopic = "target-"+sourceTopic;
             // 设置 Kafka 源相关参数
             Properties sourceProps = new Properties();
-            sourceProps.setProperty("bootstrap.servers", bootstrap);
+//            sourceProps.setProperty("bootstrap.servers", bootstrap);
             sourceProps.setProperty("group.id", "g1");
             sourceProps.setProperty("scan.startup.mode", "latest-offset");
             sourceProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sourceProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sourceProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-
-            if (hasKrbProperty){
-                sourceProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
-                        "    useKeyTab=true\n" +
-                        "    storeKey=true\n" +
-                        "    debug=true\n" +
-                        "    serviceName=kafka\n" +
-                        "    keyTab=\"" + krb5Keytab + "\"\n" +
-                        "    principal=\"" + principal + "\";");
-            }
-
-// todo 此处可能和 不能自动刷新 tgt有关
 
             // 创建 Kafka 源数据流
             KafkaSource<String> source = KafkaSource.<String>builder()
@@ -139,7 +127,7 @@ public class DDS2FlinkCDC {
             // 对每条数据进行反序列化和处理
             DataStream<String> processedStream = sourceStream.map(data -> {
                 logger.info("==> get data from kafka [get crud] :{}", data);
-                return processData(data,schema);
+                return processData(data,"test");
             }).filter(new FilterFunction<String>() {
                 @Override
                 public boolean filter(String value) throws Exception {
@@ -155,17 +143,6 @@ public class DDS2FlinkCDC {
             sinkProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
             sinkProps.setProperty(SaslConfigs.SASL_MECHANISM, "GSSAPI");
             sinkProps.setProperty(SaslConfigs.SASL_KERBEROS_SERVICE_NAME, "kafka");
-            if (hasKrbProperty){
-                sinkProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "com.sun.security.auth.module.Krb5LoginModule required\n" +
-                        "    useKeyTab=true\n" +
-                        "    storeKey=true\n" +
-                        "    debug=true\n" +
-                        "    serviceName=kafka\n" +
-                        "    keyTab=\"" + krb5Keytab + "\"\n" +
-                        "    principal=\"" + principal + "\";");
-            }
-
-
 
             logger.info("==> 从源topic:{}->宿topic:{}", sourceTopic, sinkTopic);
             // 创建 Kafka 宿数据流
@@ -182,7 +159,7 @@ public class DDS2FlinkCDC {
             processedStream.sinkTo(sink);
         }
         // 执行程序
-        env.execute("开始同步数据作业A!");
+        env.execute("同步数据作业A");
 
     }
 
