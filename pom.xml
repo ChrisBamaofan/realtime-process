@@ -113,6 +113,26 @@
             <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.zetyun</groupId>
+            <artifactId>jasyptwrapper</artifactId>
+            <version>1.0.0</version>
+            <scope>system</scope>
+            <systemPath>D:/workspace/flink-cdc/src/main/resources/jasyptwrapper-1.0.0.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <version>5.3.28</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework</groupId>
+                    <artifactId>spring-jcl</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -125,7 +145,6 @@
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
-
                 </configuration>
                 <executions>
                     <execution>

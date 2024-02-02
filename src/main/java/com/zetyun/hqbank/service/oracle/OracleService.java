@@ -2,7 +2,7 @@ package com.zetyun.hqbank.service.oracle;
 
 import com.zetyun.hqbank.bean.flink.FlinkTableMap;
 import com.zetyun.hqbank.util.YamlUtil;
-//import com.zetyun.rt.jasyptwrapper.Jasypt;
+import com.zetyun.rt.jasyptwrapper.Jasypt;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -73,7 +73,10 @@ public class OracleService {
                 String tableName = res.getString(2);
 
                 if (CollectionUtils.isNotEmpty(whiteList)) {
-                    if (!whiteList.contains(tableName.toLowerCase(Locale.ROOT))) {
+                    if (!whiteList.contains(tableName.toLowerCase(Locale.ROOT))
+                    && !whiteList.contains(tableName.toUpperCase(Locale.ROOT))
+                    && !whiteList.contains(tableName)
+                    ) {
                         continue;
                     }
                 }
@@ -217,8 +220,11 @@ public class OracleService {
                 return;
             }
             String url = YamlUtil.getValueByKey(path, "oracle", "url");
+
             String username = YamlUtil.getValueByKey(path, "oracle", "username");
+            username = Jasypt.decrypt(username);
             String password = YamlUtil.getValueByKey(path, "oracle", "password");
+            password = Jasypt.decrypt(password);
             Class.forName("oracle.jdbc.driver.OracleDriver");
             // 连接到数据库
             connection = DriverManager.getConnection(url, username, password);
@@ -227,21 +233,6 @@ public class OracleService {
         }
     }
 
-//
-//public static final String key = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAJnBfLtWamZ3hKPcmsoDTGBmOc6H/fsfZStPTOj7R6x5/XP628vN6LHRACk99hg3yYbah+pHfzzDe4U1EWSsC418cRCBoxZZp6SHBbIkpwgbdXNmA6R3iJd6FlEuwwSFcNwPYQ0xv7U6UUTrYmWCCoUa+KFY9cbYkSsa06+ykemxAgMBAAECgYAXbPxVCpCBdho2YQkQWDpNwaVzCxMuLJVcaOOd55L++0MbZZARWBjo5p/wqKkS/YTtz+O/VQ9Usa/jFrfEr9W+htMYHIWbJTXWsvE18vs022ciybkP4Fx00Ljs7qll+dkIZtYql3cqo1ndXQQ8qpruzqaKMVoXv9riE57+P2gUQQJBAOE2+mUIAizvaXPHuq6FF7a3DT5hgmo+8Sba9Dtzvz54nxkb8J1TlJjsA1YNZDhvl/AWtI5E22EPZR2ctDUh5XkCQQCuxeuPzn4Q9B/g3WOtLKJpTr0ZM+XeGroP6XUCh8l9Cnx/WB/YZWhT9FoLo11BuAP4hQp1TsXu90a09rxbnK/5AkApTmAWb6WWgEKjDZrbr2VuCZzQOConOmwYaEgrL0uANbdYb5tt/4pdkcv62HHtN+pyCngLL+3cm2o8SCV1KUZhAkApEuabc2H5RgY/6IfGaRj6OsECLUo2en2Dw8/1+keGFXLQ0rsZNivgnyqSVaBTE5YLT+j3TL4DvSVm3h3CQf6xAkEAvdgMSzfESqPZHQZ/u03JyzaMb4RF3ma86jHaf6Uxs2QvsplgjKACpUvYWSgrcgfnrpAgcSVLH6veLaJo6uF6RA==";
-//    public static void main(String[] args) {
-////        StandardPBEStringEncryptor encryptorencryptor = new StandardPBEStringEncryptor();
-////        EnvironmentStringPBEConfig config = new EnvironmentStringPBEConfig();
-////        config.setAlgorithm("PEM");
-////        //自己在用的时候更改此密码
-////        config.setPassword(key);
-////        encryptorencryptor.setConfig(config);
-//
-//        String value="iSnddL2XEPD01WDUNYjDdGU/eLGRZ+1IvuJU3cL9bQNbWbd5LPuUxbgypC5LnkyQ4m8dOoH2FQQK2SupW0yh5QLptVf33X4oqHQwFbI6SqKQZzagJk9G68jSMESqy4bRacjWyr+NOJ+Br0EAvAfPZsc14KaL5kTGEAw5L8aWARo=";
-//
-//        String enPwd = Jasypt.decrypt(value);
-//        System.out.println(enPwd);
-//    }
 
 }
 

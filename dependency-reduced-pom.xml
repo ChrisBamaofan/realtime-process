@@ -220,6 +220,13 @@
       <version>1.18.20</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.zetyun</groupId>
+      <artifactId>jasyptwrapper</artifactId>
+      <version>1.0.0</version>
+      <scope>system</scope>
+      <systemPath>D:/workspace/flink-cdc/src/main/resources/jasyptwrapper-1.0.0.jar</systemPath>
+    </dependency>
   </dependencies>
   <properties>
     <flink.version>1.15.1</flink.version>

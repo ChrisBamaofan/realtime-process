@@ -53,7 +53,7 @@ public class DDS2FlinkCDC {
         String bootstrap = YamlUtil.getValueByKey(systemConfigPath, "kafka", "bootstrap");
         // db config
         String oracleUri = YamlUtil.getValueByKey(userConfigPath, "oracle", "url");
-        String[] parts = oracleUri.split("/");//todo 这里改成 /
+        String[] parts = oracleUri.split("/");
         String database = parts[1];
         List<String> owners = YamlUtil.getListByKey(userConfigPath, "table", "owner");
         List<String> tables = YamlUtil.getListByKey(userConfigPath, "table", "tableNames");
@@ -104,7 +104,6 @@ public class DDS2FlinkCDC {
             String sinkTopic = "target-"+sourceTopic;
             // 设置 Kafka 源相关参数
             Properties sourceProps = new Properties();
-//            sourceProps.setProperty("bootstrap.servers", bootstrap);
             sourceProps.setProperty("group.id", "g1");
             sourceProps.setProperty("scan.startup.mode", "latest-offset");
             sourceProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
