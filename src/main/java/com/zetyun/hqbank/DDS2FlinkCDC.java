@@ -7,6 +7,7 @@ import com.zetyun.hqbank.bean.dds.DDSPayload;
 import com.zetyun.hqbank.service.oracle.OracleService;
 import com.zetyun.hqbank.util.KafkaUtil;
 import com.zetyun.hqbank.util.YamlUtil;
+import com.zetyun.rt.jasyptwrapper.Jasypt;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -53,6 +54,7 @@ public class DDS2FlinkCDC {
         String bootstrap = YamlUtil.getValueByKey(systemConfigPath, "kafka", "bootstrap");
         // db config
         String oracleUri = YamlUtil.getValueByKey(userConfigPath, "oracle", "url");
+        oracleUri = Jasypt.decrypt(oracleUri);
         String[] parts = oracleUri.split("/");
         String database = parts[1];
         List<String> owners = YamlUtil.getListByKey(userConfigPath, "table", "owner");

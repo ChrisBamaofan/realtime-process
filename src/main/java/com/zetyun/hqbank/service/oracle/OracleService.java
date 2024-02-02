@@ -220,7 +220,7 @@ public class OracleService {
                 return;
             }
             String url = YamlUtil.getValueByKey(path, "oracle", "url");
-
+            url = Jasypt.decrypt(url);
             String username = YamlUtil.getValueByKey(path, "oracle", "username");
             username = Jasypt.decrypt(username);
             String password = YamlUtil.getValueByKey(path, "oracle", "password");

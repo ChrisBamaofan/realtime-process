@@ -4,6 +4,7 @@ import com.zetyun.hqbank.bean.flink.FlinkTableMap;
 import com.zetyun.hqbank.service.oracle.OracleService;
 import com.zetyun.hqbank.util.KafkaUtil;
 import com.zetyun.hqbank.util.YamlUtil;
+import com.zetyun.rt.jasyptwrapper.Jasypt;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.Configuration;
@@ -31,6 +32,7 @@ public class FlinkTable2IceTable {
         // 白名单，如果不为空，则建立所有表的流
         List<String> tables = YamlUtil.getListByKey(userConfigPATH, "table", "tableNames");
         String oracleUri = YamlUtil.getValueByKey(userConfigPATH, "oracle", "url");
+        oracleUri = Jasypt.decrypt(oracleUri);
         String[] parts = oracleUri.split("/");
         String databaseName = parts[1];
 
