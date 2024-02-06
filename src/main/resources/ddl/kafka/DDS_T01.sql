@@ -1,4 +1,5 @@
-CREATE TABLE if not exists   _db_.KAFKA_DDS_T01 (
-    C1 decimal, C2 STRING, C3 timestamp,
+CREATE TABLE if not exists   db.tableA (
+    C1 decimal
     PRIMARY KEY (`C1`) NOT ENFORCED ) PARTITIONED BY (`C1`) WITH (
-    'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.group.id' = 'g1','scan.startup.mode' = 'earliest-offset','format' = 'debezium-json')
+    'connector' = 'kafka', 'topic' = 'topic', 'properties.bootstrap.servers' = 'kafka:9092',
+    'properties.group.id' = 'g1','scan.startup.mode' = 'earliest-offset','format' = 'debezium-json')

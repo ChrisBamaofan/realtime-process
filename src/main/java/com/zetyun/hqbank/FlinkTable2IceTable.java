@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-// --userConfig D:/conf/windows/userConfig.yaml --systemConfig D:/conf/windows/systemConfig.yaml
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
 
@@ -78,15 +77,10 @@ public class FlinkTable2IceTable {
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
         StreamTableEnvironment streamTableEnv = StreamTableEnvironment.create(env, settings);
 
-        // target-orcl-dds-t_zhj2,<"ice_sql","">
-        // target-orcl-dds-t_zhj2,target_orcl_dds_t_zhj2
-//        HashMap<String, HashMap<String, String>> sqlMap = null;
         List<FlinkTableMap> flinkTableMaps = new ArrayList<>();
-        HashMap<String,String> tableMap = null;
         OracleService oracleTrigger = new OracleService();
-        for (int j = 0; j < owners.size(); j++) {
-            String owner = owners.get(j);
-            flinkTableMaps = oracleTrigger.generateSql(catalogName, databaseName, owner, bootstrap,tables,userConfigPATH);
+        for (String owner : owners) {
+            flinkTableMaps = oracleTrigger.generateSql(catalogName, databaseName, owner, bootstrap, tables, userConfigPATH);
         }
 
         // create hive_catalog

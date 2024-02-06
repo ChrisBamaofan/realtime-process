@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zetyun.hqbank.bean.dds.DDSData;
 import com.zetyun.hqbank.bean.dds.DDSPayload;
+import com.zetyun.hqbank.enums.DDSOprEnums;
 import com.zetyun.hqbank.service.oracle.OracleService;
 import com.zetyun.hqbank.util.KafkaUtil;
 import com.zetyun.hqbank.util.YamlUtil;
@@ -30,6 +31,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
+
+import static com.zetyun.hqbank.bean.dds.DDSPayload.encrypt;
 
 
 /**
@@ -160,11 +163,20 @@ public class DDS2FlinkCDC {
             processedStream.sinkTo(sink);
         }
         // 执行程序
-        env.execute("同步数据作业A");
+        env.execute("同步数据作业A："+ whiteList);
 
     }
 
-    private static String processData(String input,String schema) {
+    /**
+     * {"scn":88125961,"tms":"2024-02-06 10:18:06","xid":"11.7.8102","payload":{"op":"c","schema":{"owner":"DDS","table":"TEST2"},"row":1,"rid":"AAAZUBAAEAAIllEAAG","after":{"CHAR1":"3","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}}}
+     * {"CHAR1":"3","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
+     *
+     * {"scn":88127297,"tms":"2024-02-06 10:39:12","xid":"11.15.8101","payload":{"op":"u","schema":{"owner":"DDS","table":"TEST2"},"row":1,"rid":"AAAZUBAAEAAIllEAAG","before":{"CHAR1":"3","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null},"after":{"CHAR1":"4","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}}}
+     * {"CHAR1":"3","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
+     * {"CHAR1":"4","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
+     *
+     * */
+    public static String processData(String input, String schema) {
         ObjectMapper om = new ObjectMapper();
         DDSPayload p = new DDSPayload();
         DDSPayload dummy = p.createDummy(schema);
@@ -177,6 +189,54 @@ public class DDS2FlinkCDC {
         }
         try {
             DDSData ddsData = om.readValue(input, DDSData.class);
+            // 如果新增 op = c，全量更新 op = c，则为每一行增加一列，auto_md5_id = DDSData.payload 的 md5
+            //
+            DDSPayload payload = ddsData.getPayload();
+            if(StringUtils.equalsIgnoreCase(DDSOprEnums.INSERT.getOperateName(), payload.getOp())){
+                LinkedHashMap<String,Object> after_map = (LinkedHashMap) payload.getAfter();
+                String afterStr = after_map.toString();
+                try {
+                    String auto_md5_id = encrypt(afterStr);
+                    after_map.put("auto_md5_id",auto_md5_id);
+                    payload.setAfter(after_map);
+                    logger.info("<== construct data : {}",after_map);
+                    return om.writeValueAsString(payload);
+                } catch (Exception e) {
+                    logger.error("！！！error when assembling dds data!!!",e);
+                }
+            }else if (StringUtils.equalsIgnoreCase(DDSOprEnums.UPDATE.getOperateName(),payload.getOp())){
+                LinkedHashMap<String,Object> after_map = (LinkedHashMap) payload.getAfter();
+                LinkedHashMap<String,Object> before_map = (LinkedHashMap) payload.getBefore();
+                String afterStr = after_map.toString();
+                String beforeStr = before_map.toString();
+                try {
+                    String after_auto_md5_id = encrypt(afterStr);
+                    after_map.put("auto_md5_id",after_auto_md5_id);
+                    payload.setAfter(after_map);
+                    logger.info("<== construct data : {}",after_map);
+
+                    String before_auto_md5_id = encrypt(beforeStr);
+                    before_map.put("auto_md5_id",before_auto_md5_id);
+                    payload.setBefore(before_map);
+                    logger.info("<== construct data : {}",before_map);
+                    return om.writeValueAsString(payload);
+                } catch (Exception e) {
+                    logger.error("！！！error when assembling dds data!!!",e);
+                }
+            }else if (StringUtils.equalsIgnoreCase(DDSOprEnums.DELETE.getOperateName(),payload.getOp())){
+                LinkedHashMap<String,Object> before_map = (LinkedHashMap) payload.getBefore();
+                String beforeStr = before_map.toString();
+                try {
+                    String auto_md5_id = encrypt(beforeStr);
+                    before_map.put("auto_md5_id",auto_md5_id);
+                    payload.setBefore(before_map);
+                    logger.info("<== construct data : {}",before_map);
+                    return om.writeValueAsString(payload);
+                } catch (Exception e) {
+                    logger.error("！！！error when assembling dds data!!!",e);
+                }
+            }
+
             return om.writeValueAsString(ddsData.getPayload());
         } catch (IOException e) {
             logger.error("[processData] 异常情况！", e);
