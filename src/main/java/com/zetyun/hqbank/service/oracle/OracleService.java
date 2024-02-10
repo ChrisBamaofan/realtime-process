@@ -157,7 +157,7 @@ public class OracleService {
             }
 
             String key = "PRIMARY KEY (`_KEY_`) NOT ENFORCED ) PARTITIONED BY (`_KEY_`) WITH (";
-            key = key.replace("_KEY_", uniqueIdColumnName);
+            key = key.replace("_KEY_", "auto_md5_id");
             kafkaSql.append(key);
             iceSql.append(key);
             iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop')");

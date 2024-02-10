@@ -23,7 +23,7 @@ public class FlinkTable2IceTable {
         // kerberos 认证配置
         ParameterTool parameters = ParameterTool.fromArgs(args);
         String userConfigPATH = parameters.get("userConfig");
-        String systemConfigPath = parameters.get("systemConfig");
+        String systemConfigPath = "/opt/flink-on-yarn/conf/systemConfig.yaml";
         logger.info("userConfigPath:{},systemConfigPath:{}",userConfigPATH,systemConfigPath);
 
         List<String> owners = YamlUtil.getListByKey(userConfigPATH, "table", "owner");
