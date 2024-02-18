@@ -130,7 +130,7 @@ public class DDS2FlinkCDC {
 
             // 对每条数据进行反序列化和处理
             DataStream<String> processedStream = sourceStream.map(data -> {
-                logger.info("==> get data from kafka [get crud] :{}", data);
+                logger.debug("==> get data from kafka [get crud] :{}", data);
                 return processData(data,"test");
             }).filter(new FilterFunction<String>() {
                 @Override
@@ -199,7 +199,7 @@ public class DDS2FlinkCDC {
                     String auto_md5_id = encrypt(afterStr);
                     after_map.put("auto_md5_id",auto_md5_id);
                     payload.setAfter(after_map);
-                    logger.info("<== construct data : {}",after_map);
+                    logger.debug("<== construct data : {}",after_map);
                     return om.writeValueAsString(payload);
                 } catch (Exception e) {
                     logger.error("！！！error when assembling dds data!!!",e);
@@ -213,12 +213,12 @@ public class DDS2FlinkCDC {
                     String after_auto_md5_id = encrypt(afterStr);
                     after_map.put("auto_md5_id",after_auto_md5_id);
                     payload.setAfter(after_map);
-                    logger.info("<== construct data : {}",after_map);
+                    logger.debug("<== construct data : {}",after_map);
 
                     String before_auto_md5_id = encrypt(beforeStr);
                     before_map.put("auto_md5_id",before_auto_md5_id);
                     payload.setBefore(before_map);
-                    logger.info("<== construct data : {}",before_map);
+                    logger.debug("<== construct data : {}",before_map);
                     return om.writeValueAsString(payload);
                 } catch (Exception e) {
                     logger.error("！！！error when assembling dds data!!!",e);
