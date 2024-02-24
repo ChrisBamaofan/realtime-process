@@ -48,7 +48,7 @@ public class DDS2FlinkCDC {
         ParameterTool parameters = ParameterTool.fromArgs(args);
         String userConfigPath = parameters.get("userConfig");
         String systemConfigPath = "/opt/flink-on-yarn/conf/systemConfig.yaml";
-
+//        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
         // 设置 Flink 环境
         String jaasConf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "jaasConf");
         String krb5Conf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "krb5Conf");
@@ -83,10 +83,12 @@ public class DDS2FlinkCDC {
         flinkProps.setProperty("security.kerberos.login.principal", principal);
         flinkProps.setProperty("security.kerberos.login.contexts", "Client,KafkaClient");
         flinkProps.setProperty("state.backend", "hashmap");
+        Long checkpointInterval = Long.valueOf(YamlUtil.getValueByKey(userConfigPath, "flink", "checkpointInterval"));
 
         Configuration flinkConfig = new Configuration();
         flinkConfig.addAllToProperties(flinkProps);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(flinkConfig);
+        env.enableCheckpointing(checkpointInterval);
 
         List<String> topic = new ArrayList<>();
         OracleService oracleTrigger = new OracleService();
@@ -130,7 +132,7 @@ public class DDS2FlinkCDC {
 
             // 对每条数据进行反序列化和处理
             DataStream<String> processedStream = sourceStream.map(data -> {
-                logger.debug("==> get data from kafka [get crud] :{}", data);
+                logger.info("==> get data from kafka [get crud] :{}", data);
                 return processData(data,"test");
             }).filter(new FilterFunction<String>() {
                 @Override

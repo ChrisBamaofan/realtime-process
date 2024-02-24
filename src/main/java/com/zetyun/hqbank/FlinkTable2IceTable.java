@@ -24,6 +24,8 @@ public class FlinkTable2IceTable {
         ParameterTool parameters = ParameterTool.fromArgs(args);
         String userConfigPATH = parameters.get("userConfig");
         String systemConfigPath = "/opt/flink-on-yarn/conf/systemConfig.yaml";
+
+//        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
         logger.info("userConfigPath:{},systemConfigPath:{}",userConfigPATH,systemConfigPath);
 
         List<String> owners = YamlUtil.getListByKey(userConfigPATH, "table", "owner");

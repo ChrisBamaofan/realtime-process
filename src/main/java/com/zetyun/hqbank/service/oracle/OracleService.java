@@ -35,14 +35,14 @@ public class OracleService {
      * */
 //    private static String processData(String input,String schema) {
     public static void main(String[] args) {
-        String insert="{\"scn\":88125961,\"tms\":\"2024-02-06 10:18:06\",\"xid\":\"11.7.8102\",\"payload\":{\"op\":\"c\",\"schema\":{\"owner\":\"DDS\",\"table\":\"TEST2\"},\"row\":1,\"rid\":\"AAAZUBAAEAAIllEAAG\",\"after\":{\"CHAR1\":\"3\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null}}}";
-        String update = "{\"scn\":88127297,\"tms\":\"2024-02-06 10:39:12\",\"xid\":\"11.15.8101\",\"payload\":{\"op\":\"u\",\"schema\":{\"owner\":\"DDS\",\"table\":\"TEST2\"},\"row\":1,\"rid\":\"AAAZUBAAEAAIllEAAG\",\"before\":{\"CHAR1\":\"3\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null},\"after\":{\"CHAR1\":\"4\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null}}}";
+//        String insert="{\"scn\":88125961,\"tms\":\"2024-02-06 10:18:06\",\"xid\":\"11.7.8102\",\"payload\":{\"op\":\"c\",\"schema\":{\"owner\":\"DDS\",\"table\":\"TEST2\"},\"row\":1,\"rid\":\"AAAZUBAAEAAIllEAAG\",\"after\":{\"CHAR1\":\"3\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null}}}";
+//        String update = "{\"scn\":88127297,\"tms\":\"2024-02-06 10:39:12\",\"xid\":\"11.15.8101\",\"payload\":{\"op\":\"u\",\"schema\":{\"owner\":\"DDS\",\"table\":\"TEST2\"},\"row\":1,\"rid\":\"AAAZUBAAEAAIllEAAG\",\"before\":{\"CHAR1\":\"3\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null},\"after\":{\"CHAR1\":\"4\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null}}}";
 
 //        processData(update,"");
-        processData(insert,"");
-//        OracleService how2ObtainFieldInfoFromJdbc = new OracleService();
+//        processData(insert,"");
+        OracleService how2ObtainFieldInfoFromJdbc = new OracleService();
 //        // 第一种方式：执行sql语句获取 select * from user_pop_info where 1 = 2
-//        how2ObtainFieldInfoFromJdbc.method1();
+        how2ObtainFieldInfoFromJdbc.method1();
     }
 
     // 组装 作业A 从这些topic中拿 数据
@@ -147,9 +147,10 @@ public class OracleService {
                         uniqueIdColumnName = columnName;
                     }
                 }
-                String type = getColumnType(columnClassName);
-                kafkaSql.append(columnName).append(" ").append(type).append(",");
-                iceSql.append(columnName).append(" ").append(type).append(",");
+                String kafkaType = getColumnType(columnClassName);
+                String iceType= getIceColumnType(columnClassName);
+                kafkaSql.append(columnName).append(" ").append(kafkaType).append(",");
+                iceSql.append(columnName).append(" ").append(iceType).append(",");
             }
 
             if (StringUtils.isEmpty(uniqueIdColumnName)) {
@@ -176,7 +177,7 @@ public class OracleService {
 
     public String getColumnType(String columnClassName) {
         if (columnClassName.contains("java.lang.String")) {
-            return "String";
+            return "string";
         }
         if (columnClassName.contains("java.math.BigDecimal")) {
             return "decimal";
@@ -188,15 +189,15 @@ public class OracleService {
             return "timestamp";
         }
         if (columnClassName.contains("Float")) {
-            return "Float";
+            return "float";
         }
         if (columnClassName.contains("Double")) {
-            return "Double";
+            return "double";
         }
         if (columnClassName.contains("OracleClob")
                 || columnClassName.contains("OracleBlob")
                 || columnClassName.contains("OracleNClob")) {
-            return "String";
+            return "string";
         }
         if (columnClassName.contains("INTERVALYM") || columnClassName.contains("INTERVALDS")) {
             return "timestamp";
@@ -205,14 +206,50 @@ public class OracleService {
             return "RAW";
         }
         // 增加对应的类型
-        return "String";
+        return "string";
+
+    }
+    public String getIceColumnType(String columnClassName) {
+        if (columnClassName.contains("java.lang.String")) {
+            return "string";
+        }
+        if (columnClassName.contains("java.math.BigDecimal")) {
+            return "decimal";
+        }
+        if (columnClassName.contains("java.sql.Timestamp")) {
+            return "date";
+        }
+        if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
+            return "timestamp";
+        }
+        if (columnClassName.contains("Float")) {
+            return "float";
+        }
+        if (columnClassName.contains("Double")) {
+            return "double";
+        }
+        if (columnClassName.contains("OracleClob")
+                || columnClassName.contains("OracleBlob")
+                || columnClassName.contains("OracleNClob")) {
+            return "string";
+        }
+        if (columnClassName.contains("INTERVALYM") || columnClassName.contains("INTERVALDS")) {
+            return "timestamp";
+        }
+        if (columnClassName.contains("[B")) {
+            return "RAW";
+        }
+        // 增加对应的类型
+        return "string";
 
     }
 
 
+
     private void method1() {
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.T_BIG where 1 = 2");
+            getConnection("D:/conf/windows/userConfig.yaml");
+            PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.test9 where 1 = 2");
             ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
 
             for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
