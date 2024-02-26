@@ -129,7 +129,7 @@ public class OracleService {
                                     String sinkTopic, String bootstrap,FlinkTableMap flinkTableMap) {
         getConnection(userConfigPath);
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement("select * from " + owner + "." + table + " where 1 = 2");
+            PreparedStatement preparedStatement = connection.prepareStatement("select * from \"" + owner + "\".\"" + table + "\" where 1 = 2");
             ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
             String uniqueIdColumnName = "";
             String firstColumnName = "";
