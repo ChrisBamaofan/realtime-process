@@ -79,6 +79,7 @@ public class OracleService {
             PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
             ResultSet res = preparedStatement1.executeQuery();
 
+            String oriOwner = owner;
             database = database.toLowerCase(Locale.ROOT);
             owner = owner.toLowerCase(Locale.ROOT);
             while (res.next()) {
@@ -115,7 +116,7 @@ public class OracleService {
                         .append(tableName).append("( auto_md5_id string,");
 
                 // 获取字段
-                flinkTableMap = getColumns(database, owner, tableName, kafkaDDLSql, icebergSql,newKafkaTopicName.toLowerCase(Locale.ROOT), bootstrap,flinkTableMap);
+                flinkTableMap = getColumns(database, oriOwner, tableName, kafkaDDLSql, icebergSql,newKafkaTopicName.toLowerCase(Locale.ROOT), bootstrap,flinkTableMap);
                 result.add(flinkTableMap);
             }
         } catch (RuntimeException | SQLException runtimeException) {
