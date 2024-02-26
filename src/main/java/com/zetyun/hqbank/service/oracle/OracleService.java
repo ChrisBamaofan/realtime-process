@@ -94,6 +94,7 @@ public class OracleService {
                     }
                 }
 
+                String oriTableName = tableName;
                 tableName = tableName.toLowerCase(Locale.ROOT);
                 FlinkTableMap flinkTableMap = new FlinkTableMap();
                 String kafkaTableName = "kafka_"+database+"_"+owner+"_"+tableName;
@@ -116,7 +117,7 @@ public class OracleService {
                         .append(tableName).append("( auto_md5_id string,");
 
                 // 获取字段
-                flinkTableMap = getColumns(database, oriOwner, tableName, kafkaDDLSql, icebergSql,newKafkaTopicName.toLowerCase(Locale.ROOT), bootstrap,flinkTableMap);
+                flinkTableMap = getColumns(database, oriOwner, oriTableName, kafkaDDLSql, icebergSql,newKafkaTopicName.toLowerCase(Locale.ROOT), bootstrap,flinkTableMap);
                 result.add(flinkTableMap);
             }
         } catch (RuntimeException | SQLException runtimeException) {
