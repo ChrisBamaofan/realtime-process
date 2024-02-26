@@ -83,6 +83,7 @@ public class DDS2FlinkCDC {
         flinkProps.setProperty("security.kerberos.login.principal", principal);
         flinkProps.setProperty("security.kerberos.login.contexts", "Client,KafkaClient");
         flinkProps.setProperty("state.backend", "hashmap");
+
         Long checkpointInterval = Long.valueOf(YamlUtil.getValueByKey(userConfigPath, "flink", "checkpointInterval"));
 
         Configuration flinkConfig = new Configuration();

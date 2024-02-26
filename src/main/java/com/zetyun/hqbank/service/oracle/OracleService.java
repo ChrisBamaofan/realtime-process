@@ -9,9 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 import static com.zetyun.hqbank.DDS2FlinkCDC.processData;
 
@@ -139,6 +137,10 @@ public class OracleService {
             for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
                 String columnClassName = resultSetMetaData.getColumnClassName(i + 1);
                 String columnName = resultSetMetaData.getColumnName(i + 1);
+                int precision = resultSetMetaData.getPrecision(i + 1);
+                int scale = resultSetMetaData.getScale(i + 1);
+
+
                 if (StringUtils.isEmpty(firstColumnName)) {
                     firstColumnName = columnName;
                 }
@@ -147,8 +149,8 @@ public class OracleService {
                         uniqueIdColumnName = columnName;
                     }
                 }
-                String kafkaType = getColumnType(columnClassName);
-                String iceType= getIceColumnType(columnClassName);
+                String kafkaType = getColumnType(columnClassName,precision,scale);
+                String iceType= getIceColumnType(columnClassName,precision,scale);
                 kafkaSql.append(columnName).append(" ").append(kafkaType).append(",");
                 iceSql.append(columnName).append(" ").append(iceType).append(",");
             }
@@ -175,12 +177,12 @@ public class OracleService {
         return flinkTableMap;
     }
 
-    public String getColumnType(String columnClassName) {
+    public String getColumnType(String columnClassName,int precision,int scale) {
         if (columnClassName.contains("java.lang.String")) {
             return "string";
         }
         if (columnClassName.contains("java.math.BigDecimal")) {
-            return "decimal";
+            return "decimal("+precision+","+scale+")";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
             return "timestamp";
@@ -209,12 +211,12 @@ public class OracleService {
         return "string";
 
     }
-    public String getIceColumnType(String columnClassName) {
+    public String getIceColumnType(String columnClassName,int precision,int scale) {
         if (columnClassName.contains("java.lang.String")) {
             return "string";
         }
         if (columnClassName.contains("java.math.BigDecimal")) {
-            return "decimal";
+            return "decimal("+precision+","+scale+")";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
             return "date";
@@ -244,19 +246,25 @@ public class OracleService {
 
     }
 
-
-
     private void method1() {
         try {
             getConnection("D:/conf/windows/userConfig.yaml");
             PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.test9 where 1 = 2");
+
+//            getOracleColumn_info(connection,"TEST10");
+//            System.out.println(11);
             ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
 
             for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
                 log.info("java类型:{}", resultSetMetaData.getColumnClassName(i + 1));
                 log.info("数据库类型:{}", resultSetMetaData.getColumnTypeName(i + 1));
                 log.info("字段名称:{}", resultSetMetaData.getColumnName(i + 1));
+                log.info("精度1:{}", resultSetMetaData.getPrecision(i + 1));
+                log.info("精度2:{}", resultSetMetaData.getScale(i + 1));
+
             }
+//            DataTypes
+
         } catch (Exception e) {
             log.error("method1 error ", e);
         }
