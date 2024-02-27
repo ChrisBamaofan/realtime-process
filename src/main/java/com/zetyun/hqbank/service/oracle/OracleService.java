@@ -165,7 +165,7 @@ public class OracleService {
             key = key.replace("_KEY_", "auto_md5_id");
             kafkaSql.append(key);
             iceSql.append(key);
-            iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop')");
+            iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop', 'write.metadata.delete-after-commit.enabled' = 'true', 'write.metadata.previous-versions-max' = '10')");
             String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.sasl.kerberos.service.name' = 'kafka','properties.sasl.mechanism' = 'GSSAPI','properties.security.protocol' = 'SASL_PLAINTEXT','properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
             kafkaPrefix = kafkaPrefix.replace("_TOPIC_", sinkTopic).replace("_BOOTSTRAP_", bootstrap);
             kafkaSql.append(kafkaPrefix);
