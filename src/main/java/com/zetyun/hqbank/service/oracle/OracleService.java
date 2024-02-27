@@ -184,7 +184,8 @@ public class OracleService {
             return "string";
         }
         if (columnClassName.contains("java.math.BigDecimal")) {
-            return "decimal("+precision+","+scale+")";
+//            return "decimal("+precision+","+scale+")";
+            return "float";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
             return "timestamp";
@@ -218,7 +219,8 @@ public class OracleService {
             return "string";
         }
         if (columnClassName.contains("java.math.BigDecimal")) {
-            return "decimal("+precision+","+scale+")";
+//            return "decimal("+precision+","+scale+")";
+            return "float";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
             return "date";
