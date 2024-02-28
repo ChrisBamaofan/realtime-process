@@ -140,6 +140,7 @@ public class OracleService {
                 String columnClassName = resultSetMetaData.getColumnClassName(i + 1);
                 String columnName = resultSetMetaData.getColumnName(i + 1);
                 int precision = resultSetMetaData.getPrecision(i + 1);
+                precision = precision==38? 10:38;
                 int scale = resultSetMetaData.getScale(i + 1);
 
 
@@ -184,8 +185,8 @@ public class OracleService {
             return "string";
         }
         if (columnClassName.contains("java.math.BigDecimal")) {
-            return "DEC("+precision+","+scale+")";
-//            return "DOUBLE";
+            return "DECIMAL("+precision+","+scale+")";
+//            return "INTEGER";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
             return "timestamp";
@@ -219,8 +220,8 @@ public class OracleService {
             return "string";
         }
         if (columnClassName.contains("java.math.BigDecimal")) {
-            return "DEC("+precision+","+scale+")";
-//            return "NUMBER";
+            return "DECIMAL("+precision+","+scale+")";
+//            return "INTEGER";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
             return "date";
