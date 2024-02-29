@@ -162,7 +162,7 @@ public class OracleService {
                 uniqueIdColumnName = firstColumnName;
             }
 
-            String key = "PRIMARY KEY (`_KEY_`) NOT ENFORCED ) PARTITIONED BY (`_KEY_`) WITH (";
+            String key = "PRIMARY KEY (`_KEY_`) NOT ENFORCED ) WITH (";
             key = key.replace("_KEY_", "auto_md5_id");
             kafkaSql.append(key);
             iceSql.append(key);
