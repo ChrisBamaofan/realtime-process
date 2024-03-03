@@ -47,8 +47,8 @@ public class DDS2FlinkCDC {
     public static void main(String[] args) throws Exception {
         ParameterTool parameters = ParameterTool.fromArgs(args);
         String userConfigPath = parameters.get("userConfig");
-        String systemConfigPath = "/opt/flink-on-yarn/conf/systemConfig.yaml";
-//        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
+//        String systemConfigPath = "/opt/flink-on-yarn/conf/systemConfig.yaml";
+        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
         // 设置 Flink 环境
         String jaasConf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "jaasConf");
         String krb5Conf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "krb5Conf");
@@ -202,7 +202,7 @@ public class DDS2FlinkCDC {
                     String auto_md5_id = encrypt(afterStr);
                     after_map.put("auto_md5_id",auto_md5_id);
                     payload.setAfter(after_map);
-                    logger.debug("<== construct data : {}",after_map);
+                    logger.info("<== construct data : {}",after_map);
                     return om.writeValueAsString(payload);
                 } catch (Exception e) {
                     logger.error("！！！error when assembling dds data!!!",e);
@@ -216,12 +216,12 @@ public class DDS2FlinkCDC {
                     String after_auto_md5_id = encrypt(afterStr);
                     after_map.put("auto_md5_id",after_auto_md5_id);
                     payload.setAfter(after_map);
-                    logger.debug("<== construct data : {}",after_map);
+                    logger.info("<== construct data : {}",after_map);
 
                     String before_auto_md5_id = encrypt(beforeStr);
                     before_map.put("auto_md5_id",before_auto_md5_id);
                     payload.setBefore(before_map);
-                    logger.debug("<== construct data : {}",before_map);
+                    logger.info("<== construct data : {}",before_map);
                     return om.writeValueAsString(payload);
                 } catch (Exception e) {
                     logger.error("！！！error when assembling dds data!!!",e);
