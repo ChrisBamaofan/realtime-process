@@ -108,13 +108,13 @@ public class OracleService {
                 kafkaDDLSql.append("CREATE TABLE if not exists ");
                 kafkaDDLSql.append(database).append(".kafka_").append(database).append("_").append(owner);
                 kafkaDDLSql.append("_");
-                kafkaDDLSql.append(tableName).append("( auto_md5_id string,");
+                kafkaDDLSql.append(tableName).append("( AUTO_MD5_ID STRING,");
 
                 StringBuilder icebergSql = new StringBuilder();
                 icebergSql.append("CREATE TABLE if not exists ");
                 icebergSql.append(catalogName).append(".").append(database)
                         .append(".ice_").append(database).append("_").append(owner).append("_")
-                        .append(tableName).append("( auto_md5_id string,");
+                        .append(tableName).append("( AUTO_MD5_ID STRING,");
 
                 // 获取字段
                 flinkTableMap = getColumns(database, oriOwner, oriTableName, kafkaDDLSql, icebergSql,newKafkaTopicName.toLowerCase(Locale.ROOT), bootstrap,flinkTableMap);
@@ -140,7 +140,6 @@ public class OracleService {
                 String columnClassName = resultSetMetaData.getColumnClassName(i + 1);
                 String columnName = resultSetMetaData.getColumnName(i + 1);
                 int precision = resultSetMetaData.getPrecision(i + 1);
-                precision = precision==38? 10:38;
                 int scale = resultSetMetaData.getScale(i + 1);
 
 
@@ -163,10 +162,10 @@ public class OracleService {
             }
 
             String key = "PRIMARY KEY (`_KEY_`) NOT ENFORCED ) WITH (";
-            key = key.replace("_KEY_", "auto_md5_id");
+            key = key.replace("_KEY_", "AUTO_MD5_ID");
             kafkaSql.append(key);
             iceSql.append(key);
-            iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'engine.hive.enabled' = 'true', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop', 'write.metadata.delete-after-commit.enabled' = 'true', 'write.metadata.previous-versions-max' = '10')");
+            iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop')");
             String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.sasl.kerberos.service.name' = 'kafka','properties.sasl.mechanism' = 'GSSAPI','properties.security.protocol' = 'SASL_PLAINTEXT','properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
             kafkaPrefix = kafkaPrefix.replace("_TOPIC_", sinkTopic).replace("_BOOTSTRAP_", bootstrap);
             kafkaSql.append(kafkaPrefix);
@@ -224,7 +223,7 @@ public class OracleService {
 //            return "INTEGER";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
-            return "date";
+            return "timestamp";
         }
         if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
             return "timestamp";
