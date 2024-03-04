@@ -56,8 +56,8 @@ public class DDS2FlinkCDC {
     public static void main(String[] args) throws Exception {
         ParameterTool parameters = ParameterTool.fromArgs(args);
         String userConfigPath = parameters.get("userConfig");
-//        String systemConfigPath = "/opt/flink-on-yarn/conf/systemConfig.yaml";
-        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
+        String systemConfigPath = "/opt/flink-on-yarn/conf/systemConfig.yaml";
+//        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
         // 设置 Flink 环境
         String jaasConf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "jaasConf");
         String krb5Conf = YamlUtil.getValueByKey(systemConfigPath, "kerberos", "krb5Conf");
