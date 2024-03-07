@@ -188,6 +188,9 @@ public class OracleService {
 //            return "INTEGER";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
+            return "date";
+        }
+        if (columnClassName.contains("oracle.sql.TIMESTAMP")) {
             return "timestamp";
         }
         if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
@@ -223,6 +226,9 @@ public class OracleService {
 //            return "INTEGER";
         }
         if (columnClassName.contains("java.sql.Timestamp")) {
+            return "date";
+        }
+        if (columnClassName.contains("oracle.sql.TIMESTAMP")) {
             return "timestamp";
         }
         if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
