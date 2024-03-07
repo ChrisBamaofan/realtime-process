@@ -10,6 +10,7 @@ import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.bridge.java.StreamStatementSet;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,7 @@ import java.util.*;
 public class FlinkTable2IceTable {
     private static Logger logger = LoggerFactory.getLogger(FlinkTable2IceTable.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         // kerberos 认证配置
         ParameterTool parameters = ParameterTool.fromArgs(args);
         String userConfigPATH = parameters.get("userConfig");
@@ -102,6 +103,7 @@ public class FlinkTable2IceTable {
         streamTableEnv.executeSql("create database if not exists " + catalogName + "." + databaseName);
         streamTableEnv.executeSql("create database if not exists " + databaseName);
 
+        StreamStatementSet statementSet = streamTableEnv.createStatementSet();
         for (FlinkTableMap bean: flinkTableMaps) {
             String sinkTopicName = bean.getTopicName();
             String kafkaSql = bean.getKafkaSql();
@@ -130,7 +132,8 @@ public class FlinkTable2IceTable {
             // create sinkTable
             String insertSql = "insert into " + sinkTable + "  select * from " + sourceTable;
             logger.info("==> insert :{}", insertSql);
-            streamTableEnv.executeSql(insertSql);
+            statementSet.addInsertSql(insertSql);
         }
+        statementSet.execute();
     }
 }
