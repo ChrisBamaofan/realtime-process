@@ -37,7 +37,7 @@ import java.util.Properties;
  * 从雪球爬数据并每隔10分钟捞取数据，并调用模型做预测，并将结果写入kafka
  *
  */
-public class HotDataProcess {
+public class HotDataPredict {
     private static final Logger logger = LoggerFactory.getLogger(DDS2FlinkCDCSimple.class);
     private ObjectMapper objectMapper = new ObjectMapper();
     private static final String TOPIC_PREDICT ="predict_sentence_topic";
