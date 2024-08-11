@@ -43,13 +43,17 @@ public class HotDataPredict {
     private static final String TOPIC_PREDICT ="predict_sentence_topic";
     private static final String TOPIC_PREDICT_RESULT ="predict_sentence_result_topic";
     private static final String TOPIC_TRAIN ="train_sentence_topic";
+    private static String url ="" ;
 
     public static void main(String[] args) throws Exception {
         ParameterTool parameters = ParameterTool.fromArgs(args);
         String userConfigPath = parameters.get("userConfig");
-        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
+//        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
+        String systemConfigPath = "/opt/flink1.15/config/systemConfig.yaml";
 
         String bootstrap = YamlUtil.getValueByKey(systemConfigPath, "kafka", "bootstrap");
+        String predictUrl = YamlUtil.getValueByKey(systemConfigPath, "service", "predict");
+        url = predictUrl;
 
         logger.info("bootstrap:{}", bootstrap);
 
@@ -100,7 +104,7 @@ public class HotDataPredict {
 
     public static class PredictionService implements MapFunction<String, String> {
         private static final long serialVersionUID = 1L;
-        private final String url = "http://127.0.0.1:8008/predict";
+//        private final String url = "http://127.0.0.1:8008/predict";
 
         @Override
         public String map(String value) throws Exception {
