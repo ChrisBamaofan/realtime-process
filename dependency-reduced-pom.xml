@@ -41,6 +41,9 @@
                   <exclude>org.apache.logging.log4j</exclude>
                   <exclude>org.apache.logging.slf4j</exclude>
                   <exclude>ch.qos.logback</exclude>
+                  <exclude>META-INF/*.SF</exclude>
+                  <exclude>META-INF/*.DSA</exclude>
+                  <exclude>META-INF/*.RSA</exclude>
                 </excludes>
               </artifactSet>
             </configuration>
@@ -52,8 +55,14 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-api</artifactId>
+      <version>3.0.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client-runtime</artifactId>
-      <version>3.1.1</version>
+      <version>3.0.0</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
@@ -64,10 +73,6 @@
           <artifactId>commons-logging</artifactId>
           <groupId>commons-logging</groupId>
         </exclusion>
-        <exclusion>
-          <artifactId>jsr305</artifactId>
-          <groupId>com.google.code.findbugs</groupId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -75,58 +80,6 @@
       <artifactId>slf4j-log4j12</artifactId>
       <version>1.7.28</version>
       <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.flink</groupId>
-      <artifactId>flink-table-api-java-bridge</artifactId>
-      <version>1.15.1</version>
-      <scope>provided</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>flink-table-api-java</artifactId>
-          <groupId>org.apache.flink</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>flink-table-api-bridge-base</artifactId>
-          <groupId>org.apache.flink</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>flink-java</artifactId>
-          <groupId>org.apache.flink</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jsr305</artifactId>
-          <groupId>com.google.code.findbugs</groupId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.flink</groupId>
-      <artifactId>flink-table-planner_2.12</artifactId>
-      <version>1.15.1</version>
-      <scope>provided</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>commons-compiler</artifactId>
-          <groupId>org.codehaus.janino</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>janino</artifactId>
-          <groupId>org.codehaus.janino</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>flink-scala_2.12</artifactId>
-          <groupId>org.apache.flink</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>flink-table-runtime</artifactId>
-          <groupId>org.apache.flink</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jsr305</artifactId>
-          <groupId>com.google.code.findbugs</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.flink</groupId>
@@ -147,20 +100,16 @@
           <groupId>org.apache.flink</groupId>
         </exclusion>
         <exclusion>
+          <artifactId>flink-java</artifactId>
+          <groupId>org.apache.flink</groupId>
+        </exclusion>
+        <exclusion>
           <artifactId>flink-shaded-guava</artifactId>
           <groupId>org.apache.flink</groupId>
         </exclusion>
         <exclusion>
           <artifactId>commons-math3</artifactId>
           <groupId>org.apache.commons</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>flink-java</artifactId>
-          <groupId>org.apache.flink</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jsr305</artifactId>
-          <groupId>com.google.code.findbugs</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -190,42 +139,19 @@
           <artifactId>flink-java</artifactId>
           <groupId>org.apache.flink</groupId>
         </exclusion>
-        <exclusion>
-          <artifactId>jsr305</artifactId>
-          <groupId>com.google.code.findbugs</groupId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.flink</groupId>
-      <artifactId>flink-connector-base</artifactId>
-      <version>1.15.1</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.flink</groupId>
-      <artifactId>flink-json</artifactId>
+      <artifactId>flink-connector-kafka</artifactId>
       <version>1.15.1</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
-          <artifactId>jsr305</artifactId>
-          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>kafka-clients</artifactId>
+          <groupId>org.apache.kafka</groupId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>1.18.20</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.zetyun</groupId>
-      <artifactId>jasyptwrapper</artifactId>
-      <version>1.0.0</version>
-      <scope>system</scope>
-      <systemPath>D:/workspace/flink-cdc/src/main/resources/jasyptwrapper-1.0.0.jar</systemPath>
     </dependency>
   </dependencies>
   <properties>

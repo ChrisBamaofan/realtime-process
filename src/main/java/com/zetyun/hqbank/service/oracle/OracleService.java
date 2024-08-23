@@ -1,304 +1,304 @@
-package com.zetyun.hqbank.service.oracle;
-
-import com.zetyun.hqbank.bean.flink.FlinkTableMap;
-import com.zetyun.hqbank.util.YamlUtil;
-import com.zetyun.rt.jasyptwrapper.Jasypt;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.*;
-import java.util.*;
-
-import static com.zetyun.hqbank.DDS2FlinkCDC.processData;
-
-
-/**
- * @author zhaohaojie
- * @date 2023-12-22 14:30
- */
-public class OracleService {
-
-    private static Connection connection;
-    private static final Logger log = LoggerFactory.getLogger(OracleService.class);
-    /**
-     *
-     * {"CHAR1":"3","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
-     *
-     *
-     * {"CHAR1":"3","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
-     * {"CHAR1":"4","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
-     *
-     * */
-//    private static String processData(String input,String schema) {
-    public static void main(String[] args) {
-//        String insert="{\"scn\":88125961,\"tms\":\"2024-02-06 10:18:06\",\"xid\":\"11.7.8102\",\"payload\":{\"op\":\"c\",\"schema\":{\"owner\":\"DDS\",\"table\":\"TEST2\"},\"row\":1,\"rid\":\"AAAZUBAAEAAIllEAAG\",\"after\":{\"CHAR1\":\"3\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null}}}";
-//        String update = "{\"scn\":88127297,\"tms\":\"2024-02-06 10:39:12\",\"xid\":\"11.15.8101\",\"payload\":{\"op\":\"u\",\"schema\":{\"owner\":\"DDS\",\"table\":\"TEST2\"},\"row\":1,\"rid\":\"AAAZUBAAEAAIllEAAG\",\"before\":{\"CHAR1\":\"3\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null},\"after\":{\"CHAR1\":\"4\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null}}}";
-
-//        processData(update,"");
-//        processData(insert,"");
-        OracleService how2ObtainFieldInfoFromJdbc = new OracleService();
-//        // 第一种方式：执行sql语句获取 select * from user_pop_info where 1 = 2
-        how2ObtainFieldInfoFromJdbc.method1();
-    }
-
-    // 组装 作业A 从这些topic中拿 数据
-    // orcl-dds-t_zhj2
-    public List<String> getTopicNameByDB(String userConfigPath,String databaseName, String owner) {
-        getConnection(userConfigPath);
-        List<String> list = new ArrayList<>();
-        try {
-            String sql = "SELECT owner, table_name FROM DBA_TABLES WHERE OWNER ='"+owner+"' ORDER BY owner, table_name";
-
-            PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
-            ResultSet res = preparedStatement1.executeQuery();
-            while (res.next()) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(databaseName.toLowerCase(Locale.ROOT));
-                sb.append("-");
-                sb.append(res.getString(1).toLowerCase(Locale.ROOT));
-                sb.append("-");
-                sb.append(res.getString(2).toLowerCase(Locale.ROOT));
-                list.add(sb.toString());
-            }
-        } catch (RuntimeException | SQLException exception) {
-            log.error("error occur!", exception);
-        }
-
-        return list;
-    }
-
-    public List<FlinkTableMap> generateSql(String catalogName, String database, String owner,
-                                           String bootstrap, List<String> whiteList, String path) {
-        getConnection(path);
-        List<FlinkTableMap> result = new ArrayList<>();
-        try {
-
-            String sql = "SELECT owner, table_name FROM DBA_TABLES WHERE OWNER ='"+owner+"' ORDER BY owner, table_name";
-            PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
-            ResultSet res = preparedStatement1.executeQuery();
-
-            String oriOwner = owner;
-            database = database.toLowerCase(Locale.ROOT);
-            owner = owner.toLowerCase(Locale.ROOT);
-            while (res.next()) {
-                String tableName = res.getString(2);
-
-                if (CollectionUtils.isNotEmpty(whiteList)) {
-                    if (!whiteList.contains(tableName.toLowerCase(Locale.ROOT))
-                    && !whiteList.contains(tableName.toUpperCase(Locale.ROOT))
-                    && !whiteList.contains(tableName)
-                    ) {
-                        continue;
-                    }
-                }
-
-                String oriTableName = tableName;
-                tableName = tableName.toLowerCase(Locale.ROOT);
-                FlinkTableMap flinkTableMap = new FlinkTableMap();
-                String kafkaTableName = "kafka_"+database+"_"+owner+"_"+tableName;
-                flinkTableMap.setKafkaTableName(kafkaTableName);
-                String iceTableName = "ice_"+database+"_"+owner+"_"+tableName;
-                flinkTableMap.setIceTableName(iceTableName);
-                String newKafkaTopicName = "target-"+database+"-"+owner+"-"+tableName;
-                flinkTableMap.setTopicName(newKafkaTopicName);
-
-                StringBuilder kafkaDDLSql = new StringBuilder();
-                kafkaDDLSql.append("CREATE TABLE if not exists ");
-                kafkaDDLSql.append(database).append(".kafka_").append(database).append("_").append(owner);
-                kafkaDDLSql.append("_");
-                kafkaDDLSql.append(tableName).append("( AUTO_MD5_ID STRING,");
-
-                StringBuilder icebergSql = new StringBuilder();
-                icebergSql.append("CREATE TABLE if not exists ");
-                icebergSql.append(catalogName).append(".").append(database)
-                        .append(".ice_").append(database).append("_").append(owner).append("_")
-                        .append(tableName).append("( AUTO_MD5_ID STRING,");
-
-                // 获取字段
-                flinkTableMap = getColumns(database, oriOwner, oriTableName, kafkaDDLSql, icebergSql,newKafkaTopicName.toLowerCase(Locale.ROOT), bootstrap,flinkTableMap);
-                result.add(flinkTableMap);
-            }
-        } catch (RuntimeException | SQLException runtimeException) {
-            log.error("error", runtimeException);
-        }
-        return result;
-    }
-
-    public FlinkTableMap getColumns(String userConfigPath, String owner, String table,
-                                    StringBuilder kafkaSql, StringBuilder iceSql,
-                                    String sinkTopic, String bootstrap,FlinkTableMap flinkTableMap) {
-        getConnection(userConfigPath);
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement("select * from \"" + owner + "\".\"" + table + "\" where 1 = 2");
-            ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
-            String uniqueIdColumnName = "";
-            String firstColumnName = "";
-
-            for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
-                String columnClassName = resultSetMetaData.getColumnClassName(i + 1);
-                String columnName = resultSetMetaData.getColumnName(i + 1);
-                int precision = resultSetMetaData.getPrecision(i + 1);
-                int scale = resultSetMetaData.getScale(i + 1);
-
-
-                if (StringUtils.isEmpty(firstColumnName)) {
-                    firstColumnName = columnName;
-                }
-                if (columnClassName.contains("java.lang.String")) {
-                    if (StringUtils.isEmpty(uniqueIdColumnName)) {
-                        uniqueIdColumnName = columnName;
-                    }
-                }
-                String kafkaType = getColumnType(columnClassName,precision,scale);
-                String iceType= getIceColumnType(columnClassName,precision,scale);
-                kafkaSql.append(columnName).append(" ").append(kafkaType).append(",");
-                iceSql.append(columnName).append(" ").append(iceType).append(",");
-            }
-
-            if (StringUtils.isEmpty(uniqueIdColumnName)) {
-                uniqueIdColumnName = firstColumnName;
-            }
-
-            String key = "PRIMARY KEY (`_KEY_`) NOT ENFORCED ) WITH (";
-            key = key.replace("_KEY_", "AUTO_MD5_ID");
-            kafkaSql.append(key);
-            iceSql.append(key);
-            iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop')");
-            String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.sasl.kerberos.service.name' = 'kafka','properties.sasl.mechanism' = 'GSSAPI','properties.security.protocol' = 'SASL_PLAINTEXT','properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
-            kafkaPrefix = kafkaPrefix.replace("_TOPIC_", sinkTopic).replace("_BOOTSTRAP_", bootstrap);
-            kafkaSql.append(kafkaPrefix);
-            // target-orcl-dds-t_zhj2, <kafka_target-orcl-dds-t_zhj2,kafkaSql> <ice_target-orcl-dds-t_zhj2,iceSQL>
-            flinkTableMap.setKafkaSql(kafkaSql.toString());
-            flinkTableMap.setIceSql(iceSql.toString());
-
-        } catch (Exception e) {
-            log.error("method1 error ", e);
-        }
-        return flinkTableMap;
-    }
-
-    public String getColumnType(String columnClassName,int precision,int scale) {
-        if (columnClassName.contains("java.lang.String")) {
-            return "string";
-        }
-        if (columnClassName.contains("java.math.BigDecimal")) {
-            return "DECIMAL("+precision+","+scale+")";
-//            return "INTEGER";
-        }
-        if (columnClassName.contains("java.sql.Timestamp")) {
-            return "date";
-        }
-        if (columnClassName.contains("oracle.sql.TIMESTAMP")) {
-            return "timestamp";
-        }
-        if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
-            return "timestamp";
-        }
-        if (columnClassName.contains("Float")) {
-            return "float";
-        }
-        if (columnClassName.contains("Double")) {
-            return "double";
-        }
-        if (columnClassName.contains("OracleClob")
-                || columnClassName.contains("OracleBlob")
-                || columnClassName.contains("OracleNClob")) {
-            return "string";
-        }
-        if (columnClassName.contains("INTERVALYM") || columnClassName.contains("INTERVALDS")) {
-            return "timestamp";
-        }
-        if (columnClassName.contains("[B")) {
-            return "RAW";
-        }
-        // 增加对应的类型
-        return "string";
-
-    }
-    public String getIceColumnType(String columnClassName,int precision,int scale) {
-        if (columnClassName.contains("java.lang.String")) {
-            return "string";
-        }
-        if (columnClassName.contains("java.math.BigDecimal")) {
-            return "DECIMAL("+precision+","+scale+")";
-//            return "INTEGER";
-        }
-        if (columnClassName.contains("java.sql.Timestamp")) {
-            return "date";
-        }
-        if (columnClassName.contains("oracle.sql.TIMESTAMP")) {
-            return "timestamp";
-        }
-        if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
-            return "timestamp";
-        }
-        if (columnClassName.contains("Float")) {
-            return "float";
-        }
-        if (columnClassName.contains("Double")) {
-            return "double";
-        }
-        if (columnClassName.contains("OracleClob")
-                || columnClassName.contains("OracleBlob")
-                || columnClassName.contains("OracleNClob")) {
-            return "string";
-        }
-        if (columnClassName.contains("INTERVALYM") || columnClassName.contains("INTERVALDS")) {
-            return "timestamp";
-        }
-        if (columnClassName.contains("[B")) {
-            return "RAW";
-        }
-        // 增加对应的类型
-        return "string";
-
-    }
-
-    private void method1() {
-        try {
-            getConnection("D:/conf/windows/userConfig.yaml");
-            PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.test9 where 1 = 2");
-
-//            getOracleColumn_info(connection,"TEST10");
-//            System.out.println(11);
-            ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
-
-            for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
-                log.info("java类型:{}", resultSetMetaData.getColumnClassName(i + 1));
-                log.info("数据库类型:{}", resultSetMetaData.getColumnTypeName(i + 1));
-                log.info("字段名称:{}", resultSetMetaData.getColumnName(i + 1));
-                log.info("精度1:{}", resultSetMetaData.getPrecision(i + 1));
-                log.info("精度2:{}", resultSetMetaData.getScale(i + 1));
-
-            }
-//            DataTypes
-
-        } catch (Exception e) {
-            log.error("method1 error ", e);
-        }
-    }
-
-    public void getConnection(String path){
-        try {
-            if (connection != null){
-                return;
-            }
-            String url = YamlUtil.getValueByKey(path, "oracle", "url");
-            url = Jasypt.decrypt(url);
-            String username = YamlUtil.getValueByKey(path, "oracle", "username");
-            username = Jasypt.decrypt(username);
-            String password = YamlUtil.getValueByKey(path, "oracle", "password");
-            password = Jasypt.decrypt(password);
-            Class.forName("oracle.jdbc.driver.OracleDriver");
-            // 连接到数据库
-            connection = DriverManager.getConnection(url, username, password);
-        } catch (Exception e) {
-            log.error("autoCodeGeneratorProcess error ", e);
-        }
-    }
-
-
-}
-
+//package com.zetyun.hqbank.service.oracle;
+//
+//import com.zetyun.hqbank.bean.flink.FlinkTableMap;
+//import com.zetyun.hqbank.util.YamlUtil;
+//import com.zetyun.rt.jasyptwrapper.Jasypt;
+//import org.apache.commons.collections.CollectionUtils;
+//import org.apache.commons.lang3.StringUtils;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+//
+//import java.sql.*;
+//import java.util.*;
+//
+//import static com.zetyun.hqbank.DDS2FlinkCDC.processData;
+//
+//
+///**
+// * @author zhaohaojie
+// * @date 2023-12-22 14:30
+// */
+//public class OracleService {
+//
+//    private static Connection connection;
+//    private static final Logger log = LoggerFactory.getLogger(OracleService.class);
+//    /**
+//     *
+//     * {"CHAR1":"3","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
+//     *
+//     *
+//     * {"CHAR1":"3","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
+//     * {"CHAR1":"4","CHAR2":"3","CHAR3":"3tt","DATE_1":"2024-03-03 00:00:00","CHAR4":null,"REAL1":null,"NUM1":null,"NUM2":null,"INT1":null,"FLOAT1":null}
+//     *
+//     * */
+////    private static String processData(String input,String schema) {
+//    public static void main(String[] args) {
+////        String insert="{\"scn\":88125961,\"tms\":\"2024-02-06 10:18:06\",\"xid\":\"11.7.8102\",\"payload\":{\"op\":\"c\",\"schema\":{\"owner\":\"DDS\",\"table\":\"TEST2\"},\"row\":1,\"rid\":\"AAAZUBAAEAAIllEAAG\",\"after\":{\"CHAR1\":\"3\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null}}}";
+////        String update = "{\"scn\":88127297,\"tms\":\"2024-02-06 10:39:12\",\"xid\":\"11.15.8101\",\"payload\":{\"op\":\"u\",\"schema\":{\"owner\":\"DDS\",\"table\":\"TEST2\"},\"row\":1,\"rid\":\"AAAZUBAAEAAIllEAAG\",\"before\":{\"CHAR1\":\"3\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null},\"after\":{\"CHAR1\":\"4\",\"CHAR2\":\"3\",\"CHAR3\":\"3tt\",\"DATE_1\":\"2024-03-03 00:00:00\",\"CHAR4\":null,\"REAL1\":null,\"NUM1\":null,\"NUM2\":null,\"INT1\":null,\"FLOAT1\":null}}}";
+//
+////        processData(update,"");
+////        processData(insert,"");
+//        OracleService how2ObtainFieldInfoFromJdbc = new OracleService();
+////        // 第一种方式：执行sql语句获取 select * from user_pop_info where 1 = 2
+//        how2ObtainFieldInfoFromJdbc.method1();
+//    }
+//
+//    // 组装 作业A 从这些topic中拿 数据
+//    // orcl-dds-t_zhj2
+//    public List<String> getTopicNameByDB(String userConfigPath,String databaseName, String owner) {
+//        getConnection(userConfigPath);
+//        List<String> list = new ArrayList<>();
+//        try {
+//            String sql = "SELECT owner, table_name FROM DBA_TABLES WHERE OWNER ='"+owner+"' ORDER BY owner, table_name";
+//
+//            PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
+//            ResultSet res = preparedStatement1.executeQuery();
+//            while (res.next()) {
+//                StringBuilder sb = new StringBuilder();
+//                sb.append(databaseName.toLowerCase(Locale.ROOT));
+//                sb.append("-");
+//                sb.append(res.getString(1).toLowerCase(Locale.ROOT));
+//                sb.append("-");
+//                sb.append(res.getString(2).toLowerCase(Locale.ROOT));
+//                list.add(sb.toString());
+//            }
+//        } catch (RuntimeException | SQLException exception) {
+//            log.error("error occur!", exception);
+//        }
+//
+//        return list;
+//    }
+//
+//    public List<FlinkTableMap> generateSql(String catalogName, String database, String owner,
+//                                           String bootstrap, List<String> whiteList, String path) {
+//        getConnection(path);
+//        List<FlinkTableMap> result = new ArrayList<>();
+//        try {
+//
+//            String sql = "SELECT owner, table_name FROM DBA_TABLES WHERE OWNER ='"+owner+"' ORDER BY owner, table_name";
+//            PreparedStatement preparedStatement1 = connection.prepareStatement(sql);
+//            ResultSet res = preparedStatement1.executeQuery();
+//
+//            String oriOwner = owner;
+//            database = database.toLowerCase(Locale.ROOT);
+//            owner = owner.toLowerCase(Locale.ROOT);
+//            while (res.next()) {
+//                String tableName = res.getString(2);
+//
+//                if (CollectionUtils.isNotEmpty(whiteList)) {
+//                    if (!whiteList.contains(tableName.toLowerCase(Locale.ROOT))
+//                    && !whiteList.contains(tableName.toUpperCase(Locale.ROOT))
+//                    && !whiteList.contains(tableName)
+//                    ) {
+//                        continue;
+//                    }
+//                }
+//
+//                String oriTableName = tableName;
+//                tableName = tableName.toLowerCase(Locale.ROOT);
+//                FlinkTableMap flinkTableMap = new FlinkTableMap();
+//                String kafkaTableName = "kafka_"+database+"_"+owner+"_"+tableName;
+//                flinkTableMap.setKafkaTableName(kafkaTableName);
+//                String iceTableName = "ice_"+database+"_"+owner+"_"+tableName;
+//                flinkTableMap.setIceTableName(iceTableName);
+//                String newKafkaTopicName = "target-"+database+"-"+owner+"-"+tableName;
+//                flinkTableMap.setTopicName(newKafkaTopicName);
+//
+//                StringBuilder kafkaDDLSql = new StringBuilder();
+//                kafkaDDLSql.append("CREATE TABLE if not exists ");
+//                kafkaDDLSql.append(database).append(".kafka_").append(database).append("_").append(owner);
+//                kafkaDDLSql.append("_");
+//                kafkaDDLSql.append(tableName).append("( AUTO_MD5_ID STRING,");
+//
+//                StringBuilder icebergSql = new StringBuilder();
+//                icebergSql.append("CREATE TABLE if not exists ");
+//                icebergSql.append(catalogName).append(".").append(database)
+//                        .append(".ice_").append(database).append("_").append(owner).append("_")
+//                        .append(tableName).append("( AUTO_MD5_ID STRING,");
+//
+//                // 获取字段
+//                flinkTableMap = getColumns(database, oriOwner, oriTableName, kafkaDDLSql, icebergSql,newKafkaTopicName.toLowerCase(Locale.ROOT), bootstrap,flinkTableMap);
+//                result.add(flinkTableMap);
+//            }
+//        } catch (RuntimeException | SQLException runtimeException) {
+//            log.error("error", runtimeException);
+//        }
+//        return result;
+//    }
+//
+//    public FlinkTableMap getColumns(String userConfigPath, String owner, String table,
+//                                    StringBuilder kafkaSql, StringBuilder iceSql,
+//                                    String sinkTopic, String bootstrap,FlinkTableMap flinkTableMap) {
+//        getConnection(userConfigPath);
+//        try {
+//            PreparedStatement preparedStatement = connection.prepareStatement("select * from \"" + owner + "\".\"" + table + "\" where 1 = 2");
+//            ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
+//            String uniqueIdColumnName = "";
+//            String firstColumnName = "";
+//
+//            for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
+//                String columnClassName = resultSetMetaData.getColumnClassName(i + 1);
+//                String columnName = resultSetMetaData.getColumnName(i + 1);
+//                int precision = resultSetMetaData.getPrecision(i + 1);
+//                int scale = resultSetMetaData.getScale(i + 1);
+//
+//
+//                if (StringUtils.isEmpty(firstColumnName)) {
+//                    firstColumnName = columnName;
+//                }
+//                if (columnClassName.contains("java.lang.String")) {
+//                    if (StringUtils.isEmpty(uniqueIdColumnName)) {
+//                        uniqueIdColumnName = columnName;
+//                    }
+//                }
+//                String kafkaType = getColumnType(columnClassName,precision,scale);
+//                String iceType= getIceColumnType(columnClassName,precision,scale);
+//                kafkaSql.append(columnName).append(" ").append(kafkaType).append(",");
+//                iceSql.append(columnName).append(" ").append(iceType).append(",");
+//            }
+//
+//            if (StringUtils.isEmpty(uniqueIdColumnName)) {
+//                uniqueIdColumnName = firstColumnName;
+//            }
+//
+//            String key = "PRIMARY KEY (`_KEY_`) NOT ENFORCED ) WITH (";
+//            key = key.replace("_KEY_", "AUTO_MD5_ID");
+//            kafkaSql.append(key);
+//            iceSql.append(key);
+//            iceSql.append("'type'='iceberg', 'table_type'='iceberg', 'format-version'='2', 'write.upsert.enabled'='true','table.exec.sink.not-null-enforcer'='drop')");
+//            String kafkaPrefix = "'connector' = 'kafka', 'topic' = '_TOPIC_', 'properties.bootstrap.servers' = '_BOOTSTRAP_', 'properties.sasl.kerberos.service.name' = 'kafka','properties.sasl.mechanism' = 'GSSAPI','properties.security.protocol' = 'SASL_PLAINTEXT','properties.group.id' = 'g1','scan.startup.mode' = 'latest-offset','format' = 'debezium-json')";
+//            kafkaPrefix = kafkaPrefix.replace("_TOPIC_", sinkTopic).replace("_BOOTSTRAP_", bootstrap);
+//            kafkaSql.append(kafkaPrefix);
+//            // target-orcl-dds-t_zhj2, <kafka_target-orcl-dds-t_zhj2,kafkaSql> <ice_target-orcl-dds-t_zhj2,iceSQL>
+//            flinkTableMap.setKafkaSql(kafkaSql.toString());
+//            flinkTableMap.setIceSql(iceSql.toString());
+//
+//        } catch (Exception e) {
+//            log.error("method1 error ", e);
+//        }
+//        return flinkTableMap;
+//    }
+//
+//    public String getColumnType(String columnClassName,int precision,int scale) {
+//        if (columnClassName.contains("java.lang.String")) {
+//            return "string";
+//        }
+//        if (columnClassName.contains("java.math.BigDecimal")) {
+//            return "DECIMAL("+precision+","+scale+")";
+////            return "INTEGER";
+//        }
+//        if (columnClassName.contains("java.sql.Timestamp")) {
+//            return "date";
+//        }
+//        if (columnClassName.contains("oracle.sql.TIMESTAMP")) {
+//            return "timestamp";
+//        }
+//        if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
+//            return "timestamp";
+//        }
+//        if (columnClassName.contains("Float")) {
+//            return "float";
+//        }
+//        if (columnClassName.contains("Double")) {
+//            return "double";
+//        }
+//        if (columnClassName.contains("OracleClob")
+//                || columnClassName.contains("OracleBlob")
+//                || columnClassName.contains("OracleNClob")) {
+//            return "string";
+//        }
+//        if (columnClassName.contains("INTERVALYM") || columnClassName.contains("INTERVALDS")) {
+//            return "timestamp";
+//        }
+//        if (columnClassName.contains("[B")) {
+//            return "RAW";
+//        }
+//        // 增加对应的类型
+//        return "string";
+//
+//    }
+//    public String getIceColumnType(String columnClassName,int precision,int scale) {
+//        if (columnClassName.contains("java.lang.String")) {
+//            return "string";
+//        }
+//        if (columnClassName.contains("java.math.BigDecimal")) {
+//            return "DECIMAL("+precision+","+scale+")";
+////            return "INTEGER";
+//        }
+//        if (columnClassName.contains("java.sql.Timestamp")) {
+//            return "date";
+//        }
+//        if (columnClassName.contains("oracle.sql.TIMESTAMP")) {
+//            return "timestamp";
+//        }
+//        if (columnClassName.toLowerCase(Locale.ROOT).contains("timestamp")) {
+//            return "timestamp";
+//        }
+//        if (columnClassName.contains("Float")) {
+//            return "float";
+//        }
+//        if (columnClassName.contains("Double")) {
+//            return "double";
+//        }
+//        if (columnClassName.contains("OracleClob")
+//                || columnClassName.contains("OracleBlob")
+//                || columnClassName.contains("OracleNClob")) {
+//            return "string";
+//        }
+//        if (columnClassName.contains("INTERVALYM") || columnClassName.contains("INTERVALDS")) {
+//            return "timestamp";
+//        }
+//        if (columnClassName.contains("[B")) {
+//            return "RAW";
+//        }
+//        // 增加对应的类型
+//        return "string";
+//
+//    }
+//
+//    private void method1() {
+//        try {
+//            getConnection("D:/conf/windows/userConfig.yaml");
+//            PreparedStatement preparedStatement = connection.prepareStatement("select * from DDS.test9 where 1 = 2");
+//
+////            getOracleColumn_info(connection,"TEST10");
+////            System.out.println(11);
+//            ResultSetMetaData resultSetMetaData = preparedStatement.executeQuery().getMetaData();
+//
+//            for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
+//                log.info("java类型:{}", resultSetMetaData.getColumnClassName(i + 1));
+//                log.info("数据库类型:{}", resultSetMetaData.getColumnTypeName(i + 1));
+//                log.info("字段名称:{}", resultSetMetaData.getColumnName(i + 1));
+//                log.info("精度1:{}", resultSetMetaData.getPrecision(i + 1));
+//                log.info("精度2:{}", resultSetMetaData.getScale(i + 1));
+//
+//            }
+////            DataTypes
+//
+//        } catch (Exception e) {
+//            log.error("method1 error ", e);
+//        }
+//    }
+//
+//    public void getConnection(String path){
+//        try {
+//            if (connection != null){
+//                return;
+//            }
+//            String url = YamlUtil.getValueByKey(path, "oracle", "url");
+//            url = Jasypt.decrypt(url);
+//            String username = YamlUtil.getValueByKey(path, "oracle", "username");
+//            username = Jasypt.decrypt(username);
+//            String password = YamlUtil.getValueByKey(path, "oracle", "password");
+//            password = Jasypt.decrypt(password);
+//            Class.forName("oracle.jdbc.driver.OracleDriver");
+//            // 连接到数据库
+//            connection = DriverManager.getConnection(url, username, password);
+//        } catch (Exception e) {
+//            log.error("autoCodeGeneratorProcess error ", e);
+//        }
+//    }
+//
+//
+//}
+//
