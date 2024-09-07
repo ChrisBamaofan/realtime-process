@@ -10,6 +10,7 @@ import lombok.Data;
 public class Student {
     String name;
     Integer id;
-    Integer age;
+    Integer grade;
+    long ts;
 }
 

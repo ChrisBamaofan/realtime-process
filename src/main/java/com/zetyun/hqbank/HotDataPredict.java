@@ -42,16 +42,16 @@ import java.util.Properties;
 public class HotDataPredict {
     private static final Logger logger = LoggerFactory.getLogger(HotDataPredict.class);
     private ObjectMapper objectMapper = new ObjectMapper();
-    private static final String TOPIC_PREDICT = "predict_sentence_topic";
-    private static final String TOPIC_PREDICT_RESULT = "predict_sentence_result_topic";
-    private static final String TOPIC_TRAIN = "train_sentence_topic";
-    private static String url = "";
+    private static final String TOPIC_PREDICT ="predict_sentence_topic";
+    private static final String TOPIC_PREDICT_RESULT ="predict_sentence_result_topic";
+    private static final String TOPIC_TRAIN ="train_sentence_topic";
+    private static String url ="" ;
 
     public static void main(String[] args) throws Exception {
         ParameterTool parameters = ParameterTool.fromArgs(args);
         String userConfigPath = parameters.get("userConfig");
-        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
-//        String systemConfigPath = "/opt/flink1.15/config/systemConfig.yaml";
+//        String systemConfigPath = "D:/conf/windows/systemConfig.yaml";
+        String systemConfigPath = "/opt/flink1.15/config/systemConfig.yaml";
 
         String bootstrap = YamlUtil.getValueByKey(systemConfigPath, "kafka", "bootstrap");
         String predictUrl = YamlUtil.getValueByKey(systemConfigPath, "service", "predict");
@@ -75,38 +75,20 @@ public class HotDataPredict {
         sourceProps.setProperty("scan.startup.mode", "latest-offset");
 
         // 创建 Kafka 源数据流
-        KafkaSource<Student> source = KafkaSource.<Student>builder()
+        KafkaSource<String> source = KafkaSource.<String>builder()
                 .setBootstrapServers(bootstrap)
                 .setTopics(sourceTopic)
                 .setGroupId("g1")
                 .setStartingOffsets(OffsetsInitializer.latest())
-                .setValueOnlyDeserializer(new StudentDeserializationSchema())
+                .setValueOnlyDeserializer(new SimpleStringSchema())
                 .setProperties(sourceProps)
                 .build();
 
-        DataStreamSource<Student> sourceStream =
+        DataStreamSource<String> sourceStream =
                 env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source" + sourceTopic);
 
         // 对每条数据进行反序列化和处理, flink处理 热点信息 步骤
-//        DataStream<String> processedStream = sourceStream.map(new PredictionService());
-        DataStream<String> processedStream = sourceStream.flatMap(new FlatMapFunction<Student, String>() {
-            @Override
-            public void flatMap(Student s, Collector<String> collector) throws Exception {
-                ObjectMapper objectMapper = new ObjectMapper();
-                Student s1 = new Student();
-                s1.setAge(1);
-                s1.setName("ben");
-                s1.setAge(21);
-
-                collector.collect(objectMapper.writeValueAsString(s1));
-                Student s2 = new Student();
-                s2.setAge(2);
-                s2.setName("ben2");
-                s2.setAge(212);
-                collector.collect(objectMapper.writeValueAsString(s2));
-            }
-
-        });
+        DataStream<String> processedStream = sourceStream.map(new PredictionService());
 
         // 创建 Kafka 宿数据流
         KafkaSink<String> sink = KafkaSink.<String>builder()
@@ -128,7 +110,7 @@ public class HotDataPredict {
 
         @Override
         public String map(String value) throws Exception {
-            logger.info("start now:{}", value);
+            logger.info("start now:{}",value);
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
                 ObjectMapper objectMapper = new ObjectMapper();
                 SentenceEntity sentence = objectMapper.readValue(value, SentenceEntity.class);
@@ -149,18 +131,18 @@ public class HotDataPredict {
 
                 try (CloseableHttpResponse response = httpClient.execute(post)) {
                     if (response.getStatusLine().getStatusCode() == 200) {
-                        logger.info("result = {}", response.getEntity().getContent());
+                        logger.info("result = {}",response.getEntity().getContent());
                         return EntityUtils.toString(response.getEntity());
                     } else {
-                        logger.info("err result = {}", response.getEntity());
+                        logger.info("err result = {}",response.getEntity());
                         return "Error: " + response.getStatusLine().getStatusCode();
                     }
-                } catch (Exception e) {
-                    logger.info("Error:", e);
+                }catch(Exception e){
+                    logger.info("Error:",e);
                     return "Request failed: " + e.getMessage();
                 }
             } catch (Exception e) {
-                logger.info("Error:", e);
+                logger.info("Error:",e);
                 return "Request failed: " + e.getMessage();
             }
         }
